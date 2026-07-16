@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tripplen23/mew-skills/schemas/provenance.schema.json",
+  "title": "Mew Provenance & Licensing",
+  "description": "Provenance and license tracking for source and target artifacts (Phase 0 + Phase 4)",
+  "type": "object",
+  "required": ["schema_version", "source"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "source": {
+      "type": "object",
+      "required": ["license_spdx"],
+      "properties": {
+        "license_spdx": {
+          "type": "string",
+          "description": "SPDX identifier (e.g. MIT, Apache-2.0) or NO-LICENSE if none found"
+        },
+        "license_verified_by": { "type": "string" },
+        "repo_url": { "type": "string" },
+        "sbom_format": { "type": "string", "enum": ["SPDX-3.0.1", "CycloneDX", "none"] },
+        "sbom_path": { "type": "string" }
+      }
+    },
+    "target": {
+      "type": "object",
+      "properties": {
+        "sbom_path": { "type": "string" },
+        "license_audit_tool": { "type": "string" },
+        "incompatible_licenses_found": { "type": "boolean" }
+      }
+    },
+    "build_provenance": {
+      "type": "object",
+      "properties": {
+        "slsa_level": { "type": "string", "enum": ["L1", "L2", "L3", "none"] },
+        "builder_id": { "type": "string" },
+        "build_type": { "type": "string" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -54,7 +54,9 @@ The pilot must be deliberately difficult. Place a subtle release-mode difference
 
 ### Step 4: Define migration units
 
-Break the full migration into units aligned with the dependency graph:
+Break the full migration into units aligned with the dependency graph. Use the **Strangler Fig** pattern (Fowler, 2004): new functionality is built on top of, yet separate to the legacy code base, and behavior is moved piece by piece. "Wholesale replacements go down in flames most of the time."
+
+For Python-to-Rust migrations, use **Branch By Abstraction** (Fowler): introduce a PyO3/maturin seam — keep the Python entrypoint, implement the slice in Rust, expose it via PyO3 as `_module._slice`, and route the Python code to call it. Run the full characterization + differential suite after each slice. The transitional Python-to-Rust dispatch code is expected and will be deleted at the end.
 
 ```yaml
 units:
