@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tripplen23/mew-skills/schemas/migration-plan.schema.json",
+  "title": "Mew Migration Plan",
+  "type": "object",
+  "required": [
+    "run_id",
+    "semantic_map",
+    "pilot_units",
+    "units",
+    "stop_conditions"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string"
+    },
+    "semantic_map": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "category",
+          "source_pattern",
+          "target_pattern",
+          "risk"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "ownership",
+              "nullable",
+              "exceptions",
+              "integer_overflow",
+              "time",
+              "string_encoding",
+              "concurrency",
+              "allocator",
+              "ffi",
+              "debug_release",
+              "platform"
+            ]
+          },
+          "source_pattern": {
+            "type": "string"
+          },
+          "target_pattern": {
+            "type": "string"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "gotchas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "pilot_units": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Unit IDs designated as pilots"
+    },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "source_paths",
+          "target_paths",
+          "depends_on",
+          "risk"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^U\\d{3,}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "source_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "target_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contract_properties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "pilot": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    "stop_conditions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "performance_gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "p95_regression_max_pct": {
+            "type": "number"
+          },
+          "p99_regression_max_pct": {
+            "type": "number"
+          },
+          "peak_memory_regression_max_pct": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "worker_policy": {
+      "type": "object",
+      "properties": {
+        "isolation": {
+          "type": "string",
+          "enum": [
+            "ephemeral_worktree",
+            "container",
+            "vm",
+            "none"
+          ]
+        },
+        "one_writer_per_unit": {
+          "type": "boolean"
+        },
+        "forbidden_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "editable_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "protected_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,17 @@
+# Mew run artifacts
+.mew/runs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
