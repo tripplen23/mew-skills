@@ -44,13 +44,19 @@ For each mapping, include:
 
 ### Step 3: Select pilot slices
 
-Choose 3 pilot migration units that cover different failure modes:
+Scale the pilot count to the request mode. A bounded `feature_adoption`
+normally needs one vertical slice. A `framework_migration` starts with one
+public boundary. A broad `language_port` may use up to three units covering
+different failure modes:
 
 1. **Simple representative unit**: A leaf module with no dependencies. Tests mechanical translation.
 2. **Dependency-heavy unit**: A module with database or I/O effects. Tests side-effect preservation.
 3. **Semantic hotspot**: A module with tricky logic (concurrency, edge cases, error handling). Tests the semantic map.
 
-The pilot must be deliberately difficult. Place a subtle release-mode difference or edge-case fixture and confirm the verification system catches it.
+Every pilot must include a representative edge case or failure path. Do not
+inject a synthetic defect into production source merely to make the pilot
+"difficult"; use a fixture or mutation test when proving that verification can
+catch a subtle difference.
 
 ### Step 4: Define migration units
 
@@ -126,6 +132,9 @@ Produce `migration-plan.yaml` combining all of the above.
 
 ## Gotchas
 
+- **Do not force three pilots onto a small feature adoption.** One minimal
+  vertical slice with complete contract coverage is stronger evidence than
+  three artificial units that inflate context and implementation scope.
 - **Don't choose only easy files for the pilot.** A pilot that passes only clean examples has not been tested. Include a semantic hotspot.
 - **File-level division may be wrong.** When behavior spans modules, use module-level or feature-level units instead.
 - **Lock contract tests against modification by implementation workers.** An agent should not "solve" a failing test by weakening the requirement.
