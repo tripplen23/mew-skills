@@ -1,2 +1,2 @@
 # mew-skills
-Evidence-driven skills for behavior-preserving software migration with Mew
+Skills that prove software clones and migrations don't change behavior. Powered by Mew.
