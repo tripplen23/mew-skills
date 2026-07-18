@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tripplen23/mew-skills/schemas/migration-request.schema.json",
+  "title": "Mew Migration Request",
+  "description": "Normalized intake for an end-to-end Mew migration run",
+  "type": "object",
+  "required": [
+    "run_id",
+    "target_repo",
+    "desired_evolution",
+    "mode"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "pattern": "^\\d{8}-\\d{6}-[a-z0-9]{7}$"
+    },
+    "target_repo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "desired_evolution": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "feature_adoption",
+        "language_port",
+        "framework_migration",
+        "reconstruction"
+      ]
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["location", "purpose"],
+        "properties": {
+          "location": {
+            "type": "string",
+            "minLength": 1
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1
+          },
+          "revision": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "default": []
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "include": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "exclude": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "constraints": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": []
+    },
+    "builder_mode": {
+      "type": "string",
+      "enum": ["manual", "supervised", "delegated"],
+      "default": "supervised"
+    },
+    "approval_policy": {
+      "type": "string",
+      "enum": ["contract_and_plan", "each_semantic_change"],
+      "default": "contract_and_plan"
+    }
+  },
+  "additionalProperties": false
+}
