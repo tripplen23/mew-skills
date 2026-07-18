@@ -24,9 +24,13 @@ Load this skill when the user asks to:
 - run the complete Mew workflow rather than one isolated phase.
 
 Some teams keep project-local adopted-skill notes under
-`projects/<project-id>/skill-adopted/` (ignored by git). If the target or user
-provides one that matches the request, read it as local guidance. Do not assume
-it is universal, and do not require it for users who do not have it.
+`projects/<project-id>/skill-adopted/` (ignored by git). Resolve `<project-id>`
+from the target's git remote as the repository name — the segment after the last
+`/`, without `.git` (e.g. `github.com/tripplen23/mew` → `mew`) — falling back to
+the repository directory name when there is no remote. Load a note only when its
+`<project-id>` matches the current target and its declared scope is
+`repo:<project-id>`. Read matching notes as local guidance: do not assume they
+are universal, and do not require them for users who do not have them.
 
 For browser reconstruction, load `browser-observation` as the observation driver. For a single already-established phase, use that phase skill directly.
 

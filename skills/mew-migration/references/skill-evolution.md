@@ -27,6 +27,22 @@ it is a scratchpad for lessons earned while working on one project, not shared
 pack doctrine. Promote a note from there only after it satisfies the promotion
 rule below.
 
+Resolve `<project-id>` from the target's git remote as the repository name (the
+segment after the last `/`, without `.git`; e.g. `github.com/tripplen23/mew` →
+`mew`), falling back to the repository directory name when there is no remote.
+One project's notes never load for another target.
+
+Every note must open with a provenance header so an agent reading the file alone
+(not just its path) knows the scope, confidence, and origin:
+
+```markdown
+> Scope: repo:<project-id> — local lesson, not universal.
+> Oracle: hard | soft. Learned: <run-id or date>. Promote only per this file.
+```
+
+A note without this header, or whose `Scope` does not match the current target,
+is not loaded as guidance.
+
 If the tier is uncertain, default narrower. Promotion from repo to stack or
 stack to universal requires the same failure class in at least two independent
 runs.
