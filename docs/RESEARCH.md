@@ -27,6 +27,31 @@ Key patterns applied:
 - **Plan-validate-execute**: For destructive operations, create intermediate plan -> validate -> execute
 - **Validation loops**: Do work -> run validator -> fix -> repeat until pass
 
+## Matt Pocock: Skills for Real Engineers
+
+**Source**: [github.com/mattpocock/skills](https://github.com/mattpocock/skills)
+(inspected 2026-07-18)
+
+Key patterns adopted selectively:
+
+- **Small, composable disciplines**: orchestration and reusable engineering
+  discipline are separate, so a migration workflow can invoke focused research,
+  TDD, diagnosis, or review behavior without duplicating it.
+- **Grill before commitment**: resolve the user's decision tree before writing a
+  spec. Mew bounds this to questions that target evidence cannot answer, rather
+  than interviewing settled details.
+- **Feedback loops are the speed limit**: static checks, formatter, linter,
+  executable tests, and red-green-refactor provide hard oracles. A green unit
+  suite alone is not a handoff.
+- **Shared domain language**: repository-specific terminology belongs in
+  `CONTEXT.md` or ADRs, not universal skill instructions.
+- **Two-axis review**: standards/architecture review and contract/spec review are
+  distinct checks; passing one does not imply the other.
+
+Mew does not copy the repository's issue-tracker workflow or vendor-specific
+invocation model. The portable lesson is to keep skills adaptable and to harden
+them through real engineering feedback rather than adding one monolithic process.
+
 ## Anthropic Skills Guide (PDF)
 
 **Source**: [resources.anthropic.com](https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf) (33 pages, Jan 2026)

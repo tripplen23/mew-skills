@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "holdouts": [
+    {
+      "id": "click-python-cli",
+      "repository": "https://github.com/pallets/click.git",
+      "revision": "333c28d79cd982990ee98eef61ec20ab1a4f38ba",
+      "license": "BSD-3-Clause",
+      "stack": "python-cli",
+      "status": "planned",
+      "purpose": "Detect Mew/Rust-specific overfitting in universal migration rules.",
+      "task": "Add one bounded CLI behavior from an approved reference while preserving Click's existing public CLI contract.",
+      "required_checks": [
+        "formatter",
+        "linter",
+        "test-suite",
+        "behavioral-contract",
+        "differential-verification"
+      ]
+    }
+  ]
+}

@@ -32,7 +32,7 @@ bash scripts/validate.sh
 
 If scripts or schemas change, test them with at least one real fixture.
 
-## 7. M0 failures become skill improvements
+## 7. Real-run failures become reviewed self-healing proposals
 
 When a real agent run fails, record the failure as:
 
@@ -43,3 +43,9 @@ When a real agent run fails, record the failure as:
 - or a validation check.
 
 Do not explain the failure away as model weakness until the skill has made the desired path explicit.
+
+Classify lessons as `universal`, `stack:<name>`, or `repo:<name>` and as a hard
+or soft oracle. Runs write `proposed-skill-changes.md`; they never modify the
+shared skill pack automatically. Universal changes require a fixture, pack
+validation, holdout evaluation, and human approval. See
+`skills/mew-migration/references/skill-evolution.md`.

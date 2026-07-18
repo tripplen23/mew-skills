@@ -1,6 +1,10 @@
 # Mew run artifacts
 .mew/runs/
 
+# Local/project-specific lessons. Promote manually to skills/ or patterns/ only
+# after review, corroboration, and holdout evaluation.
+projects/*/skill-adopted/
+
 # OS
 .DS_Store
 Thumbs.db
