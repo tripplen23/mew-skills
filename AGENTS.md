@@ -2,9 +2,9 @@
 
 This repository is a reusable Agent Skills pack for evidence-driven, behavior-preserving migration. Treat it as product infrastructure, not notes.
 
-## 1. Skills must reduce prompt length
+## 1. Skills must own workflow mechanics
 
-A user should not need to restate phase order, artifact paths, schemas, approval gates, or validation commands. If a test prompt must become long to work, improve the skill.
+A user should be able to describe the target and desired evolution in plain language. The skill owns phase order, artifact paths, schemas, approval gates, and validation commands. If a user must restate those internals for the skill to work, improve the skill.
 
 ## 2. Evidence before implementation
 
