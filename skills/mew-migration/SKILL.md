@@ -23,11 +23,15 @@ Load this skill when the user asks to:
 - rewrite a subsystem with evidence-backed parity;
 - run the complete Mew workflow rather than one isolated phase.
 
-Some teams keep project-local adopted-skill notes under
-`projects/<project-id>/skill-adopted/` (ignored by git). Resolve `<project-id>`
-from the target's git remote as the repository name — the segment after the last
-`/`, without `.git` (e.g. `github.com/tripplen23/mew` → `mew`) — falling back to
-the repository directory name when there is no remote. Load a note only when its
+Some teams keep project-local adopted-skill notes in the **skill pack** (not the
+target) under `<pack>/projects/<project-id>/skill-adopted/`, where `<pack>` is
+the checked-out pack you resolve schemas and policies from (see Host behavior).
+These notes are a git-ignored local scratchpad; they are not part of the copied
+`.agents/mew-skills` anchor, so read them from the pack checkout, not the target
+tree. Resolve `<project-id>` from the **target's** git remote as the repository
+name — the segment after the last `/`, without `.git` (e.g.
+`github.com/tripplen23/mew` → `mew`) — falling back to the target's repository
+directory name when there is no remote. Load a note only when its
 `<project-id>` matches the current target and its declared scope is
 `repo:<project-id>`. Read matching notes as local guidance: do not assume they
 are universal, and do not require them for users who do not have them.
