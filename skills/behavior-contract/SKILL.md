@@ -32,6 +32,22 @@ For each surface in the inventory, capture actual behavior by running the system
 
 Use `scripts/capture_behavior.py` to automate capture for common patterns. For custom systems, write a capture script specific to the project.
 
+For a **feature adoption**, separate three evidence classes:
+
+1. current target behavior, which is the preservation oracle;
+2. requested new behavior, which becomes target contract properties;
+3. reference implementations, which provide design and protocol evidence but
+   do not redefine the target's existing behavior.
+
+Pin reference revisions, record their licenses, and prefer official API and SDK
+documentation over reverse-engineered community behavior. If the requested
+provider or SDK has no supported official path, record a blocker instead of
+claiming compatibility from a nominally similar endpoint.
+
+**Characterization tests / golden master** (Feathers, *Working Effectively with Legacy Code*, 2004, Ch. 13): Run the source over a corpus of inputs; serialize outputs to a canonical, deterministic form (sorted keys, fixed `PYTHONHASHSEED`, `allow_nan=False` in JSON). Store the corpus + outputs as the golden master. Characterization tests are *intentionally bug-preserving* — do not "fix" observed behavior while characterizing.
+
+**Metamorphic testing** (Chen et al., ACM Computing Surveys 51(1), 2018): When the source has no ground-truth oracle (numerical/simulation/ML code), identify metamorphic relations (MRs) — necessary properties relating multiple inputs and their outputs. Examples: `f(x) == f(-x)` for even functions; `decode(encode(x)) == x` for round-trips; `sort(x ++ y) == sort(y ++ x)`. Encode MRs as executable checks; they survive the migration because they are input-relative, not output-literal.
+
 ### Step 3: Build the property list
 
 For each observed behavior, create a contract property entry:
@@ -84,7 +100,9 @@ Do NOT proceed to migration planning until the contract is approved. Save the ap
 ## Gotchas
 
 - **Capture behavior, not code structure.** The contract describes what the system does, not how it does it. Internal refactoring is allowed; observable behavior changes require approval.
-- **Normalization rules must be explicit.** If you compare outputs, define exactly what counts as equivalent (e.g., "JSON key order may differ, whitespace may differ, timestamps must match within 1 second").
+- **Reference code is not the oracle.** It can reveal an extension seam or protocol fact, but target preservation properties still come from the target baseline and new properties still come from explicit user intent.
+- **Normalization rules must be explicit.** If you compare outputs, define exactly what counts as equivalent (e.g., "JSON key order may differ, whitespace may differ, timestamps must match within 1 second"). Classify every numerical output into a tolerance class: `exact` (bit-identical), `isclose` (PEP 485: `abs(a-b) <= max(rel_tol * max(abs(a),abs(b)), abs_tol)`, default `rel_tol=1e-9, abs_tol=1e-12`), `ulps` (for algorithms where ULP-level drift is acceptable), or `custom`. Use `allow_nan=False` on both sides to avoid NaN-vs-error mismatches (Python `json` emits NaN/Infinity by default; Rust `serde_json` rejects them).
+- **Determinism hazards to neutralize before comparing.** Set `PYTHONHASHSEED=0` (hash randomization is on by default since Python 3.3). Serialize with `sort_keys=True`. Handle `NaN != NaN` in IEEE 754 (use `math.isnan` / `f64::is_nan`, not `==`). Pin `TZ` and `SOURCE_DATE_EPOCH`. Define a single `canonicalize(value)` used on both sides before comparison.
 - **Side effects are behavior.** Database writes, file creation, event emission, log output — all are part of the behavioral contract.
 - **Performance can be behavior.** If users depend on response time, include a latency budget in the contract. Set budgets before migration so regressions cannot be rationalized away.
 - **debug_assert vs assert.** A side effect inside debug_assert! disappears in release builds. The contract must specify whether assertion behavior is preserved or intentionally changed.
@@ -131,3 +149,4 @@ performance_budgets:
   - path: GET /api/v1/users/{id}
     p95_ms: 50
     p99_ms: 100
+```

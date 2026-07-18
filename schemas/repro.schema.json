@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tripplen23/mew-skills/schemas/repro.schema.json",
+  "title": "Mew Reproducible Environment",
+  "description": "Pinned build/test/bench environment for the source system (Phase 0)",
+  "type": "object",
+  "required": ["schema_version", "system", "interpreter", "deps", "source_ref"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "system": {
+      "type": "object",
+      "required": ["os", "arch"],
+      "properties": {
+        "os": { "type": "string" },
+        "arch": { "type": "string" },
+        "cpu_governor": { "type": "string", "enum": ["performance", "powersave", "unknown"] }
+      }
+    },
+    "interpreter": {
+      "type": "object",
+      "properties": {
+        "python": { "type": "string", "description": "e.g. 3.11.14" },
+        "PYTHONHASHSEED": { "type": "string", "description": "0 for deterministic, or a fixed seed" },
+        "TZ": { "type": "string" },
+        "LC_ALL": { "type": "string" }
+      }
+    },
+    "deps": {
+      "type": "object",
+      "properties": {
+        "lockfile": { "type": "string" },
+        "hash_mode": { "type": "string", "enum": ["require-hashes", "lockfile", "none"] }
+      }
+    },
+    "env": {
+      "type": "object",
+      "description": "Additional pinned environment variables (e.g. SOURCE_DATE_EPOCH)",
+      "additionalProperties": { "type": "string" }
+    },
+    "source_ref": {
+      "type": "object",
+      "required": ["vcs", "commit", "dirty"],
+      "properties": {
+        "vcs": { "type": "string", "enum": ["git", "hg", "svn", "none"] },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+        "dirty": { "type": "boolean" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

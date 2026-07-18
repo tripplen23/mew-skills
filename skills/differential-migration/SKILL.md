@@ -56,17 +56,20 @@ Compare:
 
 For each mismatch:
 
-1. **Investigate**: Is it a real behavioral difference or a normalization issue?
-2. **Classify**: 
-   - `intentional_change` — covered by the contract's intentional_changes list
-   - `normalization_gap` — the normalization rule needs adjustment
-   - `regression` — the new implementation is wrong
-   - `contract_gap` — the contract missed this behavior
-3. **Fix**: 
-   - `regression` → fix the new implementation
-   - `contract_gap` → update the contract (requires human approval)
-   - `normalization_gap` → fix the normalization rule
-   - `intentional_change` → mark as expected
+1. **Investigate**: Is it a real behavioral difference, a normalization issue, or a determinism hazard?
+2. **Classify** using the failure taxonomy (McKeeman 1998 false-positive analysis + determinism hazards):
+   - `real_regression` (F1) — target output differs within tolerance, source is contracted behavior. Fix the target.
+   - `tolerance_miss` (F2) — differ only beyond agreed tolerance (float/ULP). Tighten target or widen tolerance (contract amendment).
+   - `determinism_hazard` (F3) — differ due to hash order, timezone, NaN, repr rounding. Fix canonicalization; re-run.
+   - `tolerated_difference` (F4) — both outputs "correct" per an unspecified/implementation-defined area (McKeeman false positive). Record in contract; do not "fix."
+   - `deliberate_change` (F5) — behavior intentionally changed per contract. Update golden; ensure contract records the delta.
+   - `dropped_behavior` (F6) — source behavior the contract marked `drop`. Confirm no consumer depends on it.
+   - `performance_regression` (F7) — output identical, median runtime worse than contract threshold. Optimize or renegotiate threshold.
+   - `license_provenance_break` (F8) — new dependency license incompatible with source. Block merge; resolve licensing first.
+   - `reproducibility_break` (F9) — source no longer reproduces in the pinned env. Fix env pinning before trusting any other signal.
+   - `normalization_gap` — the normalization rule needs adjustment. Fix the rule.
+   - `contract_gap` — the contract missed this behavior. Update the contract (requires human approval).
+3. **Fix**: Based on the classification, fix the target (F1), tighten/widen tolerance (F2), fix canonicalization (F3), record in contract (F4/F5/F6), optimize (F7), resolve licensing (F8), fix env (F9), fix normalization rule, or update contract.
 4. **Re-run**: After each fix, re-run the differential test for the affected unit.
 
 ### Step 5: Fan out (after pilot success)

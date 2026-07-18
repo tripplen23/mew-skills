@@ -4,7 +4,7 @@
 Usage:
     python redact_secrets.py <filepath>
 
-Exits 0 if no secrets found, 1 if secrets were found and redacted.
+Exit codes: 0=clean (no secrets found), 1=secrets found and redacted, 2=error.
 """
 import re, sys
 
@@ -12,8 +12,8 @@ PATTERNS = [
     (r'sk-[a-zA-Z0-9]{20,}', '<REDACTED:api_key>'),
     (r'ghp_[a-zA-Z0-9]{36}', '<REDACTED:github_token>'),
     (r'Bearer\s+[a-zA-Z0-9._-]+', 'Bearer <REDACTED:token>'),
-    (r'postgres(?:ql)?://[^:]+:[^@]+@', 'postgresql://<REDACTED:user:pass>@'),
-    (r'redis://[^:]+:[^@]+@', 'redis://<REDACTED:pass>@'),
+    (r'postgres(?:ql)?://[^:]+:[^@]+@', 'postgresql://<REDACTED:***@'),
+    (r'redis://[^:***@]+@', 'redis://<REDACTED:***@'),
     (r'-----BEGIN (?:RSA |EC )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC )?PRIVATE KEY-----', '<REDACTED:private_key>'),
     (r'eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+', '<REDACTED:jwt>'),
 ]
@@ -33,8 +33,12 @@ def main():
         sys.exit(2)
 
     filepath = sys.argv[1]
-    with open(filepath) as f:
-        content = f.read()
+    try:
+        with open(filepath) as f:
+            content = f.read()
+    except OSError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(2)
 
     redacted, found = redact(content)
 

@@ -12,7 +12,8 @@
   ],
   "properties": {
     "run_id": {
-      "type": "string"
+      "type": "string",
+      "description": "Format: YYYYMMDD-HHMMSS-<7char hash>"
     },
     "total_properties": {
       "type": "integer"
@@ -25,20 +26,18 @@
     },
     "verdict": {
       "type": "string",
-      "enum": [
-        "pass",
-        "conditional_pass",
-        "fail"
-      ]
+      "enum": ["pass", "conditional_pass", "fail"]
+    },
+    "tolerance_class": {
+      "type": "string",
+      "enum": ["exact", "isclose", "ulps", "custom"],
+      "description": "Numerical tolerance used for comparison (PEP 485 semantics for isclose)"
     },
     "results": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "property_id",
-          "status"
-        ],
+        "required": ["property_id", "status"],
         "properties": {
           "property_id": {
             "type": "string",
@@ -46,11 +45,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pass",
-              "mismatch",
-              "skip"
-            ]
+            "enum": ["pass", "mismatch", "skip"]
           },
           "old_output": {
             "type": "object"
@@ -64,6 +59,15 @@
           "classification": {
             "type": "string",
             "enum": [
+              "real_regression",
+              "tolerance_miss",
+              "determinism_hazard",
+              "tolerated_difference",
+              "deliberate_change",
+              "dropped_behavior",
+              "performance_regression",
+              "license_provenance_break",
+              "reproducibility_break",
               "intentional_change",
               "normalization_gap",
               "regression",
@@ -81,25 +85,11 @@
       "items": {
         "type": "object",
         "properties": {
-          "path": {
-            "type": "string"
-          },
-          "old_p95_ms": {
-            "type": "number"
-          },
-          "new_p95_ms": {
-            "type": "number"
-          },
-          "regression_pct": {
-            "type": "number"
-          },
-          "gate": {
-            "type": "string",
-            "enum": [
-              "PASS",
-              "FAIL"
-            ]
-          }
+          "path": { "type": "string" },
+          "old_p95_ms": { "type": "number" },
+          "new_p95_ms": { "type": "number" },
+          "regression_pct": { "type": "number" },
+          "gate": { "type": "string", "enum": ["PASS", "FAIL"] }
         }
       }
     }
