@@ -5,7 +5,7 @@ license: MIT
 compatibility: "OpenCode, Hermes, and Agent Skills-compatible clients"
 metadata:
   author: tripplen23
-  version: "0.2.0"
+  version: "0.3.0"
   mew-phase: END_TO_END
 ---
 
@@ -22,6 +22,13 @@ Load this skill when the user asks to:
 - adopt a capability from one or more reference implementations;
 - rewrite a subsystem with evidence-backed parity;
 - run the complete Mew workflow rather than one isolated phase.
+
+For AI model providers, gateways, SDKs, or model-selection UX, **always**
+read `references/provider-adoption.md` and follow its contract checklist
+before proposing any implementation. Provider-adoption runs that skip the
+structured reference-analysis or the provider/model approval gate will
+produce the wrong behavior — flattening model lists, ignoring credential
+scoping, and skipping provider-level selection.
 
 For browser reconstruction, load `browser-observation` as the observation driver. For a single already-established phase, use that phase skill directly.
 
@@ -111,14 +118,26 @@ Produce `repo-inventory.yaml`. Do not inventory unrelated subsystems merely to m
 
 Load `behavior-contract` for target behavior. References are design evidence, not the behavioral oracle.
 
-For each reference implementation:
+Produce a structured observation for each reference **before touching the target
+source or writing any code**. See `references/reference-inspection.md` for the
+minimum per-reference format. A web search result is not sufficient — inspect
+source files, documentation, or API docs and cite exact evidence in the run's
+`evidence.jsonl`.
 
-1. pin a revision or retrieval timestamp;
+For every reference implementation you must:
+
+1. pin a revision or retrieval timestamp to the nearest minute;
 2. inspect official documentation and official SDKs before community code;
-3. extract architecture, configuration, authentication, routing, error, and test patterns relevant to the requested capability;
-4. record provenance and license constraints;
+3. extract architecture, configuration, authentication, routing, dispatch,
+   error-mapping, and model/feature selection relevant to the request;
+4. record provenance and license constraints (exact SPDX identifier);
 5. distinguish reusable protocol facts from implementation-specific choices;
-6. never copy code whose license or provenance is unresolved.
+6. produce `reference-<name>.md` with all findings and append to evidence;
+7. never copy code whose license or provenance is unresolved.
+
+Provider-adoption runs must also produce `reference-analysis.md` that answers
+the questions in `references/provider-adoption.md` before any implementation
+code is written.
 
 The target's existing behavior remains the oracle for preservation properties. The requested evolution defines new target properties. A reference does not silently redefine either.
 
@@ -133,7 +152,14 @@ Produce `behavioral-contract.yaml` containing:
 - exact normalization and tolerance rules;
 - tests or observations supporting each property.
 
-For a new provider or SDK, cover at least selection, configuration precedence, authentication, request routing, model identity, error mapping, streaming/tool calls if supported, secret handling, and default-path compatibility.
+For a new provider or SDK, the contract must include the provider/model DNA checklist from `references/provider-adoption.md`:
+
+- provider-catalog shape;
+- model-filtering rule;
+- credential/env/config shape;
+- default compatibility behavior;
+- UI/API behavior;
+- a dedicated approval prompt for provider/model behavior before implementation proceeds.
 
 ### 5. Build the minimal plan
 
@@ -150,6 +176,8 @@ A minimal feature-adoption plan should normally contain:
 
 Do not add abstractions, provider registries, fallback systems, or dependencies unless a contract property requires them.
 
+Provider-adoption plans must describe the model-list contract and its impact on the inventory, TUI, API `/models`, and engine dispatch.
+
 ### 6. Human approval gate
 
 Stop after the contract and plan are schema-valid. Present:
@@ -160,12 +188,22 @@ Stop after the contract and plan are schema-valid. Present:
 - unknowns and blockers;
 - proposed files and dependencies;
 - test and rollback plan;
-- any SDK, auth, license, or API uncertainty.
+- any SDK, auth, license, or API uncertainty;
+- for provider-adoption: the provider/model behavior contract items and reference-analysis summary.
 
 Ask exactly:
 
 ```text
-Approve this behavioral contract and migration plan for implementation? (approve / revise / abort)
+Approve provider/model behavior before implementation?
+
+- Provider catalog shape:
+- Model filtering rule:
+- Credential/env/config shape:
+- Default compatibility behavior:
+- UI/API behavior:
+- Unknowns/blockers:
+
+Reply approve / revise / abort.
 ```
 
 Do not treat the original request as approval of the detailed contract. Do not modify production source before explicit approval.
@@ -181,6 +219,8 @@ After approval, load `differential-migration` and implement only the approved pi
 5. Compare baseline and candidate at the contracted boundary.
 6. Classify every mismatch; never weaken the contract or test to obtain a pass.
 7. Produce a schema-valid `parity-report.json` and append command outcomes to evidence.
+
+Provider-adoption runs must include executable checks for the six cases in `references/provider-adoption.md` section "Minimal tests" before claiming parity.
 
 ### 8. Handoff
 
@@ -228,5 +268,7 @@ A blocker is a valid Mew result. Do not fabricate support or substitute a merely
 ## References
 
 - `references/opencode-two-repo-workspace.md` — install and invoke this pack when `mew/` and `mew-skills/` are sibling directories
+- `references/provider-adoption.md` — required contract checklist and test cases for provider/model DNA migration
+- `references/reference-inspection.md` — minimum per-reference structured observation format
 - OpenCode Agent Skills: https://opencode.ai/docs/skills/
 - Component skills: `repo-cartographer`, `behavior-contract`, `migration-planner`, `differential-migration`, `browser-observation`
