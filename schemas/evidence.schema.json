@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tripplen23/mew-skills/schemas/evidence.schema.json",
+  "title": "Mew Evidence Entry",
+  "description": "Single line in evidence.jsonl \u2014 one observed fact per line",
+  "type": "object",
+  "required": [
+    "timestamp",
+    "phase",
+    "action",
+    "result"
+  ],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "ingest",
+        "reproduce",
+        "observe",
+        "grill",
+        "contract",
+        "plan",
+        "implement",
+        "verify",
+        "handoff"
+      ]
+    },
+    "unit_id": {
+      "type": "string",
+      "description": "Optional: migration unit this evidence relates to"
+    },
+    "action": {
+      "type": "string",
+      "description": "What was done (e.g., diff_test, capture_request, compile)"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "mismatch",
+        "info",
+        "warning"
+      ]
+    },
+    "details": {
+      "type": "object",
+      "description": "Action-specific payload"
+    },
+    "redacted": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if secrets were redacted from details"
+    }
+  },
+  "additionalProperties": false
+}

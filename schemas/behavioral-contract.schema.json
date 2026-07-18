@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tripplen23/mew-skills/schemas/behavioral-contract.schema.json",
+  "title": "Mew Behavioral Contract",
+  "description": "Explicit list of properties a migration must preserve",
+  "type": "object",
+  "required": [
+    "contract_id",
+    "source_commit",
+    "approved_by",
+    "approved_at",
+    "properties"
+  ],
+  "properties": {
+    "contract_id": {
+      "type": "string"
+    },
+    "source_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$"
+    },
+    "approved_by": {
+      "type": "string"
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "properties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "surface",
+          "property",
+          "preservation"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^P\\d{3,}$"
+          },
+          "surface": {
+            "type": "string",
+            "enum": [
+              "api",
+              "cli",
+              "database",
+              "file",
+              "event",
+              "error",
+              "performance",
+              "other"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "Endpoint path, command name, or resource identifier"
+          },
+          "property": {
+            "type": "string",
+            "description": "Human-readable description of the behavior"
+          },
+          "preservation": {
+            "type": "string",
+            "enum": [
+              "preserve",
+              "intentionally-change",
+              "deprecate",
+              "unknown"
+            ]
+          },
+          "evidence": {
+            "type": "object",
+            "description": "Captured input/output proving this behavior"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "intentional_changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "property_ref",
+          "what",
+          "why",
+          "risk",
+          "approved"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^C\\d{3,}$"
+          },
+          "property_ref": {
+            "type": "string",
+            "pattern": "^P\\d{3,}$"
+          },
+          "what": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "approved": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "normalization_rules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "performance_budgets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "p95_ms": {
+            "type": "number"
+          },
+          "p99_ms": {
+            "type": "number"
+          },
+          "peak_memory_mb": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
