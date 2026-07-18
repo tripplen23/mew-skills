@@ -2,20 +2,24 @@
 
 Evidence-driven skills for behavior-preserving software migration.
 
+The pack is designed as a **self-healing skill system**: real migrations feed
+reviewed regression evidence back into references, fixtures, schemas, and hard
+gates. This is prompt/artifact evolution with human approval.
+
 The `mew-migration` skill turns a short request into an end-to-end run. Phase
-skills handle repository mapping, behavioral DNA extraction, planning, and
+skills handle repository mapping, observable-behavior capture, planning, and
 differential verification on demand.
 
 ## Skills
 
-| Skill | Phase | What it does |
-|-------|-------|-------------|
-| `mew-migration` | END TO END | Orchestrates the complete workflow from two required inputs: target repository and desired evolution. Creates artifacts and stops for approval before implementation. |
-| `repo-cartographer` | INGEST + REPRODUCE | Inventory source repo: public APIs, CLI, file formats, DB effects, env vars, telemetry, platforms, perf. Lock source commit. |
-| `behavior-contract` | OBSERVE + CONTRACT | Extract behavioral DNA from the running system. Produce a behavioral contract with each property labeled preserve / change / deprecate / unknown. Includes characterization tests, golden master, and metamorphic testing. |
-| `migration-planner` | MIGRATION PLAN | Build a semantic map, select pilot slices, define migration units, set stop conditions and performance budgets. Uses Strangler Fig and Branch By Abstraction patterns. |
-| `differential-migration` | IMPLEMENT + VERIFY | Implement target-language slices, run differential tests against the old implementation, produce a parity report. 9-class failure taxonomy (McKeeman 1998). |
-| `browser-observation` | OBSERVE + VERIFY | Reconstruct authorized web apps with a five-channel evidence model (DOM/a11y, network, console, pixels, vision). Vision is never the sole oracle. |
+| Skill                    | Phase              | What it does                                                                                                                                                                                                                 |
+| ------------------------ | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mew-migration`          | END TO END         | Orchestrates the complete workflow from two required inputs: target repository and desired evolution. Creates artifacts and stops for approval before implementation.                                                        |
+| `repo-cartographer`      | INGEST + REPRODUCE | Inventory source repo: public APIs, CLI, file formats, DB effects, env vars, telemetry, platforms, perf. Lock source commit.                                                                                                 |
+| `behavior-contract`      | OBSERVE + CONTRACT | Capture the running system's observable behavior. Produce a behavioral contract with each property labeled preserve / change / deprecate / unknown. Includes characterization tests, golden master, and metamorphic testing. |
+| `migration-planner`      | MIGRATION PLAN     | Build a semantic map, select pilot slices, define migration units, set stop conditions and performance budgets. Uses Strangler Fig and Branch By Abstraction patterns.                                                       |
+| `differential-migration` | IMPLEMENT + VERIFY | Implement target-language slices, run differential tests against the old implementation, produce a parity report. 9-class failure taxonomy (McKeeman 1998).                                                                  |
+| `browser-observation`    | OBSERVE + VERIFY   | Reconstruct authorized web apps with a five-channel evidence model (DOM/a11y, network, console, pixels, vision). Vision is never the sole oracle.                                                                            |
 
 ## Schemas
 
@@ -43,8 +47,8 @@ Human-approved guardrails that constrain agent behavior:
 ## Workflow
 
 ```
-INGEST → REPRODUCE → OBSERVE → CONTRACT → [HUMAN APPROVAL]
-  → MIGRATION PLAN → IMPLEMENT IN SLICES → DIFFERENTIAL VERIFY → HANDOFF
+INGEST → REPRODUCE → OBSERVE → GRILL → CONTRACT → MIGRATION PLAN
+  → [HUMAN APPROVAL] → IMPLEMENT IN SLICES → DIFFERENTIAL VERIFY → HANDOFF → RETRO
 ```
 
 Human approval gates exist at: behavioral contract, dependency/SDK substitution, accepted deviations, destructive actions.
@@ -56,6 +60,20 @@ bash scripts/validate.sh
 ```
 
 Checks: `agentskills validate` on every skill, JSON Schema syntax, frontmatter security (no `< >`), `name` == directory name.
+
+Validation also enforces a 500-line cap per `SKILL.md` and validates the pinned
+holdout manifest. Universal skill changes are evaluated against a non-Mew,
+non-Rust holdout before promotion.
+
+`validate.sh` checks the pack itself. To gate a **run's** artifacts against the
+schemas (the enforcement the skills instruct), point the run gate at a run dir:
+
+```bash
+python3 scripts/validate_run.py <target>/.mew/runs/<run-id>/
+```
+
+It validates each produced artifact and every `evidence.jsonl` line, exiting
+non-zero on any schema drift.
 
 ## Installation
 
@@ -70,31 +88,32 @@ hermes skills tap add tripplen23/mew-skills
 cp -r skills/repo-cartographer ~/.hermes/skills/
 ```
 
-### OpenCode with sibling repositories
+### Project-local installation
 
-Given `workspace/mew/` and `workspace/mew-skills/`:
+Given `workspace/target/` and `workspace/mew-skills/`, install into the host's
+project skill directory:
 
 ```bash
 cd workspace
-python3 mew-skills/scripts/install-opencode.py mew
-cd mew
-opencode
+python3 scripts/install-agent-skills.py --host claude ../target
+python3 scripts/install-agent-skills.py --host codex ../target
+python3 scripts/install-agent-skills.py --host opencode ../target
+python3 scripts/install-agent-skills.py --host kiro --copy ../target
 ```
 
-OpenCode discovers the pack from the target repo's local `.agents/skills/`
-links. The installer excludes those links through `.git/info/exclude`, so they
-do not enter the target pull request.
+The installer excludes local links through `.git/info/exclude`, so they do not
+enter the target pull request.
 
-A complete provider-adoption request can stay short:
+A complete migration request can stay short:
 
 ```text
-Use mew-migration to add native OpenAI API and GitHub Copilot provider support
-while preserving the existing OpenCode Go path. Treat anomalyco/opencode and
-NousResearch/hermes-agent as references, prefer official SDKs, and keep it minimal.
+Use mew-migration to add <capability> to this repository while preserving
+existing behavior. Treat <reference repository or URL> as design evidence,
+prefer official SDKs, and keep the change minimal.
 ```
 
-See `skills/mew-migration/references/opencode-two-repo-workspace.md` for copy,
-uninstall, discovery verification, and approval instructions.
+See `docs/integrations/` for OpenCode, Claude Code, Codex, Kiro (IDE + CLI),
+copy mode, uninstall, and discovery verification notes.
 
 ## Design Principles
 
@@ -103,6 +122,8 @@ uninstall, discovery verification, and approval instructions.
 3. **Fresh-context review.** Reviewers see the diff and contract, not the author's reasoning.
 4. **Deterministic gates.** CI decides whether evidence passes — not agent confidence.
 5. **Human approval at boundaries.** Contracts, SDK substitution, deviations, destructive actions.
+6. **Self-healing, not self-modifying.** Runs propose evidence-backed skill changes after handoff; maintainers review them before the shared pack changes.
+7. **Generalization before promotion.** Repo-specific lessons stay in repo context; universal changes must not regress pinned holdouts.
 
 ## Research Base
 

@@ -1,6 +1,6 @@
 ---
 name: behavior-contract
-description: "Extracts behavioral DNA from a running system and produces a behavioral contract that defines what a migration must preserve. Labels each property as preserve, intentionally-change, deprecate, or unknown. Runs the system against representative inputs to capture observable behavior. Use after repo-cartographer has completed, when the user says \"extract behavior\" or \"build the contract\", or before planning a migration that must not break existing functionality."
+description: "Extracts the observable behavior of a running system and produces a behavioral contract that defines what a migration must preserve. Labels each property as preserve, intentionally-change, deprecate, or unknown. Runs the system against representative inputs to capture observable behavior. Use after repo-cartographer has completed, when the user says \"extract behavior\" or \"build the contract\", or before planning a migration that must not break existing functionality."
 license: MIT
 metadata:
   author: tripplen23
