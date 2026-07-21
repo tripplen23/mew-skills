@@ -19,12 +19,12 @@ for skill_dir in skills/*/; do
 done
 
 echo ""
-echo "=== JSON Schema validation ==="
+echo "=== JSON Schema metaschema validation ==="
 for schema in schemas/*.schema.json; do
-  if python3 -c "import json; json.load(open('$schema'))" 2>/dev/null; then
-    echo "  PASS: $schema is valid JSON"
+  if python3 -c "import json; from jsonschema import Draft202012Validator; Draft202012Validator.check_schema(json.load(open('$schema')))" 2>/dev/null; then
+    echo "  PASS: $schema is a valid Draft 2020-12 schema"
   else
-    echo "  FAIL: $schema is not valid JSON"
+    echo "  FAIL: $schema is not a valid Draft 2020-12 schema"
     FAIL=1
   fi
 done
@@ -53,6 +53,15 @@ if python3 -m py_compile scripts/*.py 2>/dev/null; then
   echo "  PASS: scripts/*.py compile"
 else
   echo "  FAIL: a Python script has a syntax error"
+  FAIL=1
+fi
+
+echo ""
+echo "=== Cross-artifact analyzer self-check ==="
+if python3 scripts/analyze_run.py --selfcheck >/dev/null 2>&1; then
+  echo "  PASS: analyze_run.py self-check"
+else
+  echo "  FAIL: analyze_run.py self-check"
   FAIL=1
 fi
 

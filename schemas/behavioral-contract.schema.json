@@ -7,8 +7,6 @@
   "required": [
     "contract_id",
     "source_commit",
-    "approved_by",
-    "approved_at",
     "properties"
   ],
   "properties": {
@@ -34,7 +32,8 @@
           "id",
           "surface",
           "property",
-          "preservation"
+          "preservation",
+          "oracle"
         ],
         "properties": {
           "id": {
@@ -66,14 +65,52 @@
             "type": "string",
             "enum": [
               "preserve",
+              "introduce",
               "intentionally-change",
               "deprecate",
               "unknown"
-            ]
+            ],
+            "description": "Existing behavior uses preserve, intentionally-change, or deprecate; new target behavior uses introduce. Oracle kind, not this label, selects the verification method."
+          },
+          "oracle": {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "executable-baseline",
+                  "authorized-reference",
+                  "characterization",
+                  "regression",
+                  "contract-spec",
+                  "unresolved"
+                ]
+              },
+              "command": {
+                "type": "string",
+                "description": "Executable comparison command when applicable"
+              },
+              "artifact": {
+                "type": "string",
+                "description": "Golden, trace, fixture, or captured baseline path"
+              },
+              "assertion": {
+                "type": "string",
+                "description": "Contract, characterization, or regression assertion"
+              },
+              "authorization": {
+                "type": "string",
+                "description": "Authorization evidence for an executable external reference"
+              }
+            },
+            "additionalProperties": false
           },
           "evidence": {
             "type": "object",
-            "description": "Captured input/output proving this behavior"
+            "description": "Captured inputs, outputs, and observations supporting this behavior"
           },
           "risk": {
             "type": "string",
@@ -84,6 +121,151 @@
             ]
           }
         },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "preservation": {
+                  "const": "unknown"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "oracle": {
+                  "properties": {
+                    "kind": {
+                      "const": "unresolved"
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "oracle": {
+                  "properties": {
+                    "kind": {
+                      "not": {
+                        "const": "unresolved"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "oracle": {
+                  "properties": {
+                    "kind": {
+                      "const": "contract-spec"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "oracle": {
+                  "required": [
+                    "assertion"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "oracle": {
+                  "properties": {
+                    "kind": {
+                      "const": "authorized-reference"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "oracle": {
+                  "required": [
+                    "command",
+                    "authorization"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "oracle": {
+                  "properties": {
+                    "kind": {
+                      "const": "executable-baseline"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "oracle": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "command"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "artifact"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "oracle": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "characterization",
+                        "regression"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "oracle": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "artifact"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "assertion"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
         "additionalProperties": false
       }
     },
@@ -154,6 +336,14 @@
         }
       }
     }
+  },
+  "dependentRequired": {
+    "approved_by": [
+      "approved_at"
+    ],
+    "approved_at": [
+      "approved_by"
+    ]
   },
   "additionalProperties": false
 }

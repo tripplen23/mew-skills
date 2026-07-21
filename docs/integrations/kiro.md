@@ -70,7 +70,7 @@ Kiro discovers skills when a chat session starts, so after installing you must
 
 - **IDE**: open `target/` as the workspace, start a new chat, type `/` and confirm
   `mew-migration`, `repo-cartographer`, `behavior-contract`, `migration-planner`,
-  `differential-migration`, and `browser-observation` appear. You can also open the
+  `differential-migration`, and `observation` appear. You can also open the
   **Agent Steering & Skills** section in the Kiro panel.
 - **CLI**: run `kiro` inside `target/`, then `/context show` to confirm the skills
   are loaded.

@@ -1,10 +1,10 @@
 ---
 name: differential-migration
-description: "Implements target-language code slice by slice and verifies behavioral parity through differential testing against the old implementation. Feeds equivalent inputs to both implementations, compares observable results, and produces a parity report with a mismatch investigation queue. Use after the migration plan is built, when the user says \"implement the migration\" or \"run differential tests\", or when verifying that a port preserves behavior."
+description: "Implements approved migration units and verifies properties against executable baseline or authorized reference oracles. Use only after an approved plan selects a mixed or differential route, or when the user explicitly requests differential testing; do not trigger for a generic implementation request."
 license: MIT
 metadata:
   author: tripplen23
-  version: "0.1.0"
+  version: "0.2.0"
   mew-phase: IMPLEMENT+VERIFY
 ---
 
@@ -12,135 +12,141 @@ metadata:
 
 ## Purpose
 
-Implement the target-language code one unit at a time and prove behavioral parity through differential testing. The old implementation is the oracle; disagreement produces a precise investigation queue.
+Implement approved units and verify each contract property with the oracle declared in the behavioral contract.
+
+A property is differential-eligible when `oracle.kind` is `executable-baseline` or `authorized-reference`, regardless of its preservation label. This includes an `introduce` property during authorized reconstruction when an executable reference and its authorization are recorded. Run the same inputs against the oracle and candidate at the contracted boundary.
+
+Properties with `contract-spec`, `characterization`, or `regression` oracles are not differential-eligible. Verify them with the corresponding contract, characterization, or regression test. An `unresolved` oracle blocks implementation unless the approved plan explicitly defers that property.
 
 ## Steps
 
-### Step 1: Load the migration plan
+### Step 1: Confirm the entry gate
 
-Read `.mew/runs/<run-id>/migration-plan.yaml`. If no plan exists, run migration-planner first.
+Read the approved behavioral contract and `.mew/runs/<run-id>/migration-plan.yaml`.
+
+Proceed only when:
+
+- the plan is approved;
+- its derived route is `mixed` or `differential`, or the user explicitly requested differential testing; and
+- every in-scope property maps to a concrete oracle and check.
+
+For a `mixed` route, apply differential testing only to properties with executable oracles. Keep the non-executable properties in the same verification and parity report.
 
 ### Step 2: Implement pilot units
 
-For each pilot unit (in order):
+For each pilot unit, in dependency order:
 
-1. **Implement**: Write the target-language code for the unit. Follow the semantic map for risky patterns. Use the policies in `policies/` for SDK selection, command safety, network, and secrets.
-2. **Self-check**: Run the target-language compiler/type checker. Fix errors.
-3. **Unit test**: Run unit tests for the changed module.
-4. **Contract test**: Run contract tests at public boundaries (the properties from the behavioral contract).
-5. **Differential test**: Feed equivalent inputs to old and new implementations. Compare observable results using the normalization rules from the contract.
-6. **Fresh-context review**: A reviewer agent sees only the contract, source, diff, and check commands — not the author's reasoning. It searches for counterexamples and names missing tests.
+1. Implement the smallest approved slice.
+2. Run the target formatter, compiler or type checker, and focused unit tests.
+3. Verify each property by `oracle.kind`:
+   - `executable-baseline` or `authorized-reference`: run a differential comparison;
+   - `contract-spec`: run the approved contract test;
+   - `characterization`: replay the approved characterization test;
+   - `regression`: run the approved regression test.
+4. Review the source, contract, diff, and commands for missing cases.
+5. Append commands, exit codes, and outcomes to `evidence.jsonl`.
 
-### Step 3: Differential testing
+Do not invent an executable oracle or silently substitute a reference that lacks recorded authorization.
 
-Run old and new implementations on the same input corpus:
+### Step 3: Run differential comparisons
+
+Feed the same corpus to the executable oracle and candidate. The runner's `--old` flag is the oracle command and `--new` is the candidate command:
 
 ```bash
-# Example: comparing API responses
-python scripts/diff_test.py \
-  --old "python -m src.api" \
-  --new "./target/bin/api" \
+python skills/differential-migration/scripts/diff_test.py \
+  --old "<oracle-command>" \
+  --new "<candidate-command>" \
   --corpus fixtures/replay/ \
-  --normalize json_keyorder,whitespace,timestamp_1s \
+  --normalize json_keyorder,whitespace \
   --output parity-report.json
 ```
 
-Compare:
-- Exit codes
-- Normalized output (stdout, stderr, response body)
-- Error categories
-- Side effects (database rows, files, events)
-- Timing (within performance budget)
+Use only normalization and tolerances approved in the contract. Compare:
 
-### Step 4: Handle mismatches
+- exit codes and normalized outputs;
+- error categories;
+- observable side effects such as rows, files, and events;
+- performance against approved budgets.
 
-For each mismatch:
+Pin inputs, dependencies, locale, timezone, clock, randomness, and external services where they affect results. Confirm the oracle is reproducible before trusting a mismatch.
 
-1. **Investigate**: Is it a real behavioral difference, a normalization issue, or a determinism hazard?
-2. **Classify** using the failure taxonomy (McKeeman 1998 false-positive analysis + determinism hazards):
-   - `real_regression` (F1) — target output differs within tolerance, source is contracted behavior. Fix the target.
-   - `tolerance_miss` (F2) — differ only beyond agreed tolerance (float/ULP). Tighten target or widen tolerance (contract amendment).
-   - `determinism_hazard` (F3) — differ due to hash order, timezone, NaN, repr rounding. Fix canonicalization; re-run.
-   - `tolerated_difference` (F4) — both outputs "correct" per an unspecified/implementation-defined area (McKeeman false positive). Record in contract; do not "fix."
-   - `deliberate_change` (F5) — behavior intentionally changed per contract. Update golden; ensure contract records the delta.
-   - `dropped_behavior` (F6) — source behavior the contract marked `drop`. Confirm no consumer depends on it.
-   - `performance_regression` (F7) — output identical, median runtime worse than contract threshold. Optimize or renegotiate threshold.
-   - `license_provenance_break` (F8) — new dependency license incompatible with source. Block merge; resolve licensing first.
-   - `reproducibility_break` (F9) — source no longer reproduces in the pinned env. Fix env pinning before trusting any other signal.
-   - `normalization_gap` — the normalization rule needs adjustment. Fix the rule.
-   - `contract_gap` — the contract missed this behavior. Update the contract (requires human approval).
-3. **Fix**: Based on the classification, fix the target (F1), tighten/widen tolerance (F2), fix canonicalization (F3), record in contract (F4/F5/F6), optimize (F7), resolve licensing (F8), fix env (F9), fix normalization rule, or update contract.
-4. **Re-run**: After each fix, re-run the differential test for the affected unit.
+### Step 4: Classify and resolve mismatches
 
-### Step 5: Fan out (after pilot success)
+Use this vocabulary in the report and schema:
 
-Only after all pilot units pass with stable, reproducible evidence:
+- `regression` — contracted behavior differs; fix the candidate.
+- `tolerance_miss` — an approved tolerance is exceeded; fix the candidate or obtain approval to amend the contract.
+- `nondeterminism` — uncontrolled state makes the result unstable; control it and rerun.
+- `intentional_change` — the difference matches an approved change; update the expected result and evidence.
+- `deprecation` — the difference matches an approved deprecation; verify the compatibility or removal plan.
+- `performance_regression` — an approved budget is exceeded; optimize or obtain approval to amend the budget.
+- `provenance_break` — licensing or source provenance is invalid; block the change until resolved.
+- `reproducibility_break` — the oracle or candidate cannot be reproduced in the pinned environment; repair the environment before comparison.
+- `normalization_gap` — an approved normalization is missing or incorrect; fix it and rerun.
+- `contract_gap` — expected behavior is unspecified; stop and obtain contract approval.
+
+After resolution, rerun the affected property and retain the original mismatch evidence.
+
+### Step 5: Fan out after pilot success
+
+Expand only after pilot properties pass with reproducible evidence:
 
 1. Implement remaining units in dependency order.
-2. Use isolated worktrees per writer.
-3. Require atomic commits with source IDs, contract rules, checks run, and reviewer results.
-4. Run widening test circles: unit → contract → integration → cross-platform → full regression.
+2. Keep one writer per unit and isolate concurrent work.
+3. Run focused checks after each unit.
+4. Run contract, integration, cross-platform where required, and full regression checks before handoff.
+5. Run the target repository's formatter, linter, build, and test commands; record every exit code.
 
-### Step 6: Produce parity report
+### Step 6: Produce the parity report
+
+The report is a root object conforming to `schemas/parity-report.schema.json`. Include every in-scope property, including properties verified by non-executable oracles; omit `old_output` and `new_output` when no executable comparison occurred.
 
 ```yaml
-parity_report:
-  run_id: <run-id>
-  total_properties: 45
-  passed: 43
-  mismatches: 2
-  verdict: conditional_pass
-
-  results:
-    - property_id: P001
-      status: pass
-      old_output: { status: 200, body: { id: 42, name: "Alice" } }
-      new_output: { status: 200, body: { id: 42, name: "Alice" } }
-      normalized_equal: true
-
-    - property_id: P015
-      status: mismatch
-      classification: regression
-      old_output: { status: 500, body: { error: "db_timeout" } }
-      new_output: { status: 500, body: { error: "connection_failed" } }
-      investigation: "Error message differs — new impl uses different DB driver error mapping"
-
-  performance:
-    - path: GET /api/v1/users/{id}
-      old_p95_ms: 45
-      new_p95_ms: 48
-      regression_pct: 6.7
-      gate: FAIL  # exceeds 5% budget
+run_id: <run-id>
+total_properties: 45
+passed: 43
+mismatches: 2
+verdict: conditional_pass
+results:
+  - property_id: P001
+    status: pass
+    old_output: {status: 200, body: {id: 42, name: Alice}}
+    new_output: {status: 200, body: {id: 42, name: Alice}}
+    normalized_equal: true
+  - property_id: P015
+    status: mismatch
+    classification: regression
+    old_output: {status: 500, body: {error: db_timeout}}
+    new_output: {status: 500, body: {error: connection_failed}}
+    normalized_equal: false
+    investigation: "Candidate error mapping differs from the executable oracle"
+performance:
+  - path: GET /api/v1/users/{id}
+    old_p95_ms: 45
+    new_p95_ms: 48
+    regression_pct: 6.7
+    gate: fail
 ```
+
+Check that `total_properties == passed + mismatches` and that `results` contains one entry per in-scope property.
 
 ### Step 7: Handoff
 
-After the parity report passes all gates:
-1. Present the report to the user.
-2. List any conditional passes and their conditions.
-3. Record all escaped defects as new contract properties or semantic-map rules.
-4. Produce a final evidence manifest with: contract version, source/target commits, changed units, commands and exit codes, differential mismatches, reviewer findings, approved exceptions.
+Present the parity report, unresolved conditions, and final evidence manifest. The manifest must identify the contract version, oracle and candidate revisions, changed units, commands and exit codes, mismatch resolutions, reviewer findings, and approved exceptions.
 
-## Gotchas
-
-- **A green test suite is not proof of parity.** Bun's rewrite passed 99.8% of tests but had 19 production regressions. Differential testing catches what unit tests miss.
-- **debug_assert! side effects disappear in release builds.** Test in both debug and release modes.
-- **Byte-slice and bounds behavior differs across languages.** UTF-16 odd-length slicing crashed Bun. Test boundary values explicitly.
-- **Separate test authorship from implementation.** One agent derives edge cases from the contract; another writes the port. Lock approved tests against modification.
-- **Optimize for verified units per hour, not lines per minute.** High generation throughput with a growing integration queue is negative progress.
-- **Each escaped defect becomes a permanent test and a new semantic-map rule.** A migration is complete when the new implementation is operable and the team has learned from it.
+Every escaped defect becomes a regression test or contract property. Never weaken a check merely to obtain a pass.
 
 ## Evidence
 
-Every step must append to `evidence.jsonl`:
+Append one observed fact per line to `evidence.jsonl`:
 
 ```json
 {
   "timestamp": "2026-07-17T12:00:00Z",
-  "phase": "differential_test",
+  "phase": "verify",
   "unit_id": "U001",
   "action": "diff_test",
   "result": "pass",
-  "details": { "old_exit": 0, "new_exit": 0, "normalized_equal": true }
+  "details": {"old_exit": 0, "new_exit": 0, "normalized_equal": true}
 }
 ```

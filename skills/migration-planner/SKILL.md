@@ -1,146 +1,36 @@
 ---
 name: migration-planner
-description: "Builds a migration plan from a behavioral contract. Creates a semantic map for risky source-to-target patterns, selects pilot slices, defines migration units aligned with the dependency graph, and sets stop conditions and performance budgets. Use after the behavioral contract is approved, when the user says \"plan the migration\" or \"build the migration plan\", or before implementing any target-language code."
+description: "Builds a schema-valid plan for a migration, authorized reconstruction, or feature adoption. Maps only applicable semantic risks, selects bounded pilots, orders dependency-aware units, and defines verification and stop gates. Use after a behavioral contract draft exists and before implementation."
 license: MIT
 metadata:
   author: tripplen23
-  version: "0.1.0"
+  version: "0.2.0"
   mew-phase: MIGRATION_PLAN
 ---
 
 # Migration Planner
 
-## Purpose
+Turn a behavioral contract into the smallest executable plan that preserves target behavior and introduces only the requested change.
 
-Convert the approved behavioral contract into a concrete, executable migration plan. The plan defines what gets migrated, in what order, with what risk mitigation, and when to stop.
+## Input and approval gate
 
-## Steps
+Load `.mew/runs/<run-id>/behavioral-contract.yaml` and validate it against `schemas/behavioral-contract.schema.json`.
 
-### Step 1: Load the contract
+- When invoked by `mew-migration`, accept its schema-valid draft. Build the plan so the contract and plan can receive one combined human approval; do not require prior contract approval.
+- When invoked standalone, require explicit human approval of the contract before planning.
+- Never implement production changes during planning.
 
-Read `.mew/runs/<run-id>/behavioral-contract.yaml`. If no approved contract exists, run behavior-contract first and obtain human approval.
+## Workflow
 
-### Step 2: Build the semantic map
+1. **Confirm scope.** Use the request mode selected by the orchestrator: migration, authorized reconstruction, or feature adoption. Treat the target baseline as the preservation oracle. Treat references as design evidence unless an authorized executable reference is recorded as an oracle.
+2. **Build `semantic_map`.** Include only risk categories that occur in the scoped units. Allowed categories are `ownership`, `nullable`, `exceptions`, `integer_overflow`, `time`, `string_encoding`, `concurrency`, `allocator`, `ffi`, `debug_release`, and `platform`. Do not add empty or speculative entries to cover the list. Each entry records `source_pattern`, `target_pattern`, `risk`, and applicable `gotchas`.
+3. **Define units.** Group work at the smallest boundary that owns complete contract properties. Record source and target paths, dependencies, contract properties, and risk. Order units by dependencies and keep contract tests protected from implementation changes.
+4. **Choose pilots.** A bounded feature adoption gets one minimal vertical pilot covering its extension seam, old default behavior, new behavior, and one representative failure or edge path. For larger migrations or reconstructions, add pilots only when distinct risks cannot be exercised by one bounded slice.
+5. **Encode parallel safety.** Run all IDs in `pilot_units` sequentially in dependency order. After every pilot passes, non-pilot units may share an execution wave only when every dependency has passed, mutable test resources are isolated, and each unit has one writer. Compare normalized repository-relative `target_paths`: a directory overlaps its descendants, aliases resolve to the same path, and every direct or generated write must be declared. Add `depends_on` edges for uncertain path ownership, shared protocols, schemas, database state, generated outputs, lock/build files, benchmarks, or integration order even when source imports do not require them. Do not add a second `parallel_groups` field; the orchestrator derives waves from these constraints.
+6. **Set gates.** Add concrete stop conditions for unresolved oracles, unsupported APIs, licensing or authorization conflicts, repeated parity failures, failed rollback, and material budget regressions when applicable. Copy measurable performance gates from the contract; do not invent budgets.
+7. **Set worker policy.** Limit editable paths to the unit, protect contract and run artifacts, use one writer per unit, and select isolation supported by the repository. Parallel workers return evidence fragments; one coordinator serializes canonical plan, contract, and evidence updates. Do not prescribe a language pair, framework, interop layer, or migration pattern unless the contract or repository requires it.
+8. **Write and validate.** Write `.mew/runs/<run-id>/migration-plan.yaml` exactly to `schemas/migration-plan.schema.json`, then run the pack's schema and cross-artifact checks available for the run.
 
-Create `semantic-map.yaml` that maps recurring source-language patterns to target-language equivalents. Cover the high-risk translation categories:
+## Handoff
 
-1. **Ownership and lifetimes**: How source manages memory → target equivalent
-2. **Nullable values**: How source handles null/None/nil → target equivalent
-3. **Exceptions and errors**: Source exception hierarchy → target error handling
-4. **Integer overflow**: Source behavior → target behavior
-5. **Time calculations**: Timezone handling, epoch, duration
-6. **String encodings**: UTF-8, UTF-16, byte slices
-7. **Concurrency primitives**: Threads, async, channels, locks
-8. **Allocator ownership**: Custom allocators, memory pools
-9. **FFI boundaries**: Foreign function interfaces
-10. **Debug/release behavior**: Assertions, optimization-dependent behavior
-11. **Platform-specific code**: OS conditionals
-
-For each mapping, include:
-- Source pattern (with example)
-- Target pattern (with example)
-- Risk level (low/medium/high)
-- Known gotchas
-
-### Step 3: Select pilot slices
-
-Scale the pilot count to the request mode. A bounded `feature_adoption`
-normally needs one vertical slice. A `framework_migration` starts with one
-public boundary. A broad `language_port` may use up to three units covering
-different failure modes:
-
-1. **Simple representative unit**: A leaf module with no dependencies. Tests mechanical translation.
-2. **Dependency-heavy unit**: A module with database or I/O effects. Tests side-effect preservation.
-3. **Semantic hotspot**: A module with tricky logic (concurrency, edge cases, error handling). Tests the semantic map.
-
-Every pilot must include a representative edge case or failure path. Do not
-inject a synthetic defect into production source merely to make the pilot
-"difficult"; use a fixture or mutation test when proving that verification can
-catch a subtle difference.
-
-### Step 4: Define migration units
-
-Break the full migration into units aligned with the dependency graph. Use the **Strangler Fig** pattern (Fowler, 2004): new functionality is built on top of, yet separate to the legacy code base, and behavior is moved piece by piece. "Wholesale replacements go down in flames most of the time."
-
-For Python-to-Rust migrations, use **Branch By Abstraction** (Fowler): introduce a PyO3/maturin seam — keep the Python entrypoint, implement the slice in Rust, expose it via PyO3 as `_module._slice`, and route the Python code to call it. Run the full characterization + differential suite after each slice. The transitional Python-to-Rust dispatch code is expected and will be deleted at the end.
-
-```yaml
-units:
-  - id: U001
-    name: "currency formatter"
-    source_paths: [src/format/currency.py]
-    target_paths: [src/format/currency.rs]
-    depends_on: []
-    contract_properties: [P001, P002]
-    risk: low
-    pilot: true
-
-  - id: U002
-    name: "idempotency repository"
-    source_paths: [src/db/idempotency.py]
-    target_paths: [src/db/idempotency.rs]
-    depends_on: [U001]
-    contract_properties: [P010, P011, P012]
-    risk: medium
-    pilot: true
-```
-
-### Step 5: Set stop conditions
-
-Define hard stop conditions that halt fan-out:
-
-```yaml
-stop_conditions:
-  - "Pilot mismatch rate exceeds 20%"
-  - "Workers repeatedly modify global tests"
-  - "Compiler queue grows faster than it closes for 3 consecutive rounds"
-  - "Target performance misses budget by >2x"
-  - "Rollback artifact cannot be built"
-```
-
-### Step 6: Set performance budgets
-
-From the behavioral contract's performance_budgets section, define concrete gates:
-
-```yaml
-performance_gates:
-  - path: GET /api/v1/users/{id}
-    p95_regression_max_pct: 5
-    p99_regression_max_pct: 10
-    peak_memory_regression_max_pct: 15
-```
-
-### Step 7: Define worker policy
-
-```yaml
-worker_policy:
-  isolation: ephemeral_worktree
-  one_writer_per_unit: true
-  forbidden_commands:
-    - "git reset --hard"
-    - "git stash"
-    - "git push --force"
-  editable_paths: ["src/", "tests/migration/"]
-  protected_paths:
-    - "tests/contracts/"
-    - ".mew/runs/*/behavioral-contract.yaml"
-```
-
-### Step 8: Write artifact
-
-Produce `migration-plan.yaml` combining all of the above.
-
-## Gotchas
-
-- **Do not force three pilots onto a small feature adoption.** One minimal
-  vertical slice with complete contract coverage is stronger evidence than
-  three artificial units that inflate context and implementation scope.
-- **Don't choose only easy files for the pilot.** A pilot that passes only clean examples has not been tested. Include a semantic hotspot.
-- **File-level division may be wrong.** When behavior spans modules, use module-level or feature-level units instead.
-- **Lock contract tests against modification by implementation workers.** An agent should not "solve" a failing test by weakening the requirement.
-- **Version the semantic map.** A newly discovered mismatch should update the rule and trigger targeted re-verification of affected units.
-- **Stop conditions protect against sunk-cost escalation.** Do not remove them mid-run to "unblock" progress.
-
-## Output format
-
-See `schemas/migration-plan.schema.json` for the full schema.
+Under `mew-migration`, return the schema-valid plan to the orchestrator for its combined contract-and-plan approval gate. Standalone, present the validated plan and require `approve / revise / abort` before implementation. Report blockers instead of weakening properties, tests, provenance, or stop conditions.

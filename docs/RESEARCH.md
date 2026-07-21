@@ -1,6 +1,6 @@
 # Research Base
 
-Primary sources that informed the mew-skills design. Each source was inspected directly (not from memory) during 2026-07-17 research sessions.
+Primary sources that informed the mew-skills design.
 
 ## Agent Skills Specification
 
@@ -30,7 +30,6 @@ Key patterns applied:
 ## Matt Pocock: Skills for Real Engineers
 
 **Source**: [github.com/mattpocock/skills](https://github.com/mattpocock/skills)
-(inspected 2026-07-18)
 
 Key patterns adopted selectively:
 
