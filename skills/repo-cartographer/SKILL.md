@@ -1,119 +1,32 @@
 ---
 name: repo-cartographer
-description: "Inventories a source repository to prepare for a behavior-preserving migration. Maps public APIs, CLI commands, file formats, database effects, environment variables, telemetry, supported platforms, and performance characteristics. Locks the source commit and produces a run manifest. Use when starting a Mew migration run, when analyzing a codebase before rewriting, or when the user says \"map this repo\" or \"inventory this project for migration\"."
+description: "Maps affected repository surfaces for a migration, authorized reconstruction, or feature adoption. Produces a scoped inventory and dependency map, and records the clean baseline in the canonical run manifest without modifying source behavior."
 license: MIT
 metadata:
   author: tripplen23
-  version: "0.1.0"
+  version: "0.2.0"
   mew-phase: INGEST+REPRODUCE
 ---
 
 # Repo Cartographer
 
-## Purpose
+Create the smallest evidence-backed repository inventory needed for contract extraction and planning.
 
-Create a complete, machine-readable inventory of a source repository before any migration work begins. This inventory becomes the foundation for behavioral contract extraction and migration planning.
+## Invocation and artifact ownership
 
-## Steps
+When invoked by `mew-migration`, use its run ID, run directory, `manifest.json`, and `evidence.jsonl`. Do not recreate or overwrite orchestrator-owned run artifacts such as the migration request, manifest, reproduction record, provenance record, or evidence log. Append evidence and create or update only `repo-inventory.yaml` for this phase.
 
-### Step 1: Lock the source
+When invoked standalone, create missing run infrastructure once. Generate the run ID as `YYYYMMDD-HHMMSS-<7chars>`, create `manifest.json` conforming to `schemas/run-manifest.schema.json`, and create `evidence.jsonl`. In every mode, `manifest.json` is the canonical baseline lock. Do not create or use `source-lock.json`.
 
-```bash
-cd <repo-path>
-git rev-parse HEAD  # record exact commit
-git status --porcelain  # verify clean working tree
-```
+## Dirty-tree gate
 
-If the tree is dirty, ask the user to commit or stash before proceeding. Record the commit hash in the run manifest.
+Read `git rev-parse HEAD` and `git status --porcelain` first. A dirty tree may be inspected with read-only commands, and findings must remain provisional. Do not lock a baseline, write run artifacts, or edit repository files until the user commits, reverts, or otherwise isolates the changes. After resolution, read `HEAD` and status again, require a clean tree, and record that commit in `manifest.json.source_commit` before writing the inventory.
 
-### Step 2: Create run directory
+## Workflow
 
-```
-.mew/runs/<run-id>/
-├── manifest.json
-├── source-lock.json
-├── evidence.jsonl
-├── repo-inventory.yaml
-└── ...
-```
-
-Generate a run ID from timestamp + short hash: `YYYYMMDD-HHMMSS-<7chars>`.
-
-### Step 3: Inventory the repository
-
-Scan the repository and catalog every observable surface:
-
-1. **Public APIs**: HTTP endpoints, RPC methods, GraphQL resolvers, WebSocket handlers. Record path, method, auth, request/response schemas.
-2. **CLI commands**: subcommands, flags, exit codes, output formats.
-3. **File formats**: config files, data files, export formats. Record schema or structure.
-4. **Database effects**: tables, migrations, ORM models, stored procedures, triggers.
-5. **Environment variables**: name, type, default, description, required/optional.
-6. **Telemetry**: logs, metrics, traces, events. Record format and destination.
-7. **Dependencies**: list all external packages with versions and licenses.
-8. **Supported platforms**: OS, architecture, runtime versions.
-9. **Performance characteristics**: any existing benchmarks, known perf budgets, latency expectations.
-10. **Error surfaces**: error codes, error messages users depend on, exception hierarchies.
-
-### Step 4: Record dependency graph
-
-Map import/dependency relationships between modules. Identify:
-- Leaf modules (no internal dependencies) — good pilot candidates
-- Hub modules (many dependents) — high-risk migration targets
-- Circular dependencies — integration risk
-
-### Step 5: Produce artifacts
-
-Write `repo-inventory.yaml` with all findings. Write `source-lock.json` with commit, tree status, and dependency versions. Write `manifest.json` with run identity.
-
-Append each finding to `evidence.jsonl` as an evidence entry (see schemas/evidence.schema.json).
-
-## Gotchas
-
-- **Don't skip the dependency license column.** License incompatibility between source and target ecosystems can block the migration later.
-- **Record error messages verbatim, not paraphrased.** Users and downstream systems may depend on exact error strings.
-- **Environment variables are often undocumented.** Search `.env.example`, docker-compose files, CI configs, and shell scripts — not just source code.
-- **Don't trust README alone.** The actual behavior may differ from documentation. Note discrepancies as evidence entries.
-- **The inventory is a snapshot.** If the source repo changes after locking, the run is invalidated.
-
-## Output format
-
-`repo-inventory.yaml` structure:
-
-```yaml
-run_id: <run-id>
-source_commit: <sha>
-locked_at: <ISO timestamp>
-
-public_apis:
-  - path: /api/v1/users
-    method: GET
-    auth: bearer
-    request_schema: { ... }
-    response_schema: { ... }
-
-cli_commands:
-  - name: deploy
-    flags: [--env, --force]
-    exit_codes: { 0: success, 1: config_error }
-
-database:
-  tables: [users, orders, ...]
-  migrations_dir: migrations/
-
-environment:
-  - name: DATABASE_URL
-    type: string
-    required: true
-
-dependencies:
-  - name: fastapi
-    version: 0.104.1
-    license: MIT
-
-platforms: [linux-amd64, linux-arm64, darwin-arm64]
-
-dependency_graph:
-  leaves: [utils/, types/]
-  hubs: [models/, api/]
-  cycles: []
-```
+1. **Set scope.** Start with observable surfaces affected by the requested evolution: public API or UI boundaries, CLI behavior, files and configuration, data effects, environment, telemetry, errors, platforms, and performance constraints. Include only applicable categories.
+2. **Widen on evidence.** Follow imports, callers, shared state, generated code, runtime configuration, tests, and public contracts when they can affect the scoped behavior. Do not inventory unrelated subsystems. Record why each scope expansion was necessary.
+3. **Map dependencies.** For affected modules, record direct dependencies and dependents, then identify relevant leaves, hubs, and cycles. Include package versions and licenses only where they can enter the implementation, distribution, or verification path.
+4. **Collect evidence.** Inspect source, tests, build and CI configuration, examples, and documentation. Prefer executable behavior over README claims; record discrepancies. Preserve exact user-visible error text and command output where it is a contract candidate and safe to retain. Before writing either artifact, redact credentials, tokens, personal data, sensitive paths, and secret-bearing headers or environment values; use dedicated test accounts and synthetic data where possible. Never persist an unsafe verbatim value merely because exact output is useful.
+5. **Write inventory.** Write `.mew/runs/<run-id>/repo-inventory.yaml` with the run ID, locked source commit, scoped surfaces, dependency map, evidence references, exclusions, and reasons for widened scope. Append findings to `evidence.jsonl` using `schemas/evidence.schema.json`; set `redacted: true` when any retained fact was sanitized and keep raw sensitive captures out of both artifacts.
+6. **Validate and hand off.** Validate applicable run artifacts and report unresolved dirty state, missing revisions, authorization or license blockers, and unverified assumptions. The lock is invalid if the source commit changes; re-run mapping rather than silently updating it.

@@ -1,0 +1,151 @@
+{
+    "title": "Mew Repository Inventory",
+    "description": "Scoped repository surfaces and evidence needed for migration planning",
+    "type": "object",
+    "required": [
+        "run_id",
+        "target",
+        "existing_surfaces"
+    ],
+    "properties": {
+        "run_id": {
+            "type": "string",
+            "pattern": "^\\d{8}-\\d{6}-[a-z0-9]{7}$"
+        },
+        "target": {
+            "type": "object",
+            "required": [
+                "repo",
+                "commit",
+                "dirty"
+            ],
+            "properties": {
+                "repo": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "commit": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{7,40}$"
+                },
+                "branch": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "dirty": {
+                    "type": "boolean"
+                },
+                "dirty_reason": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            },
+            "additionalProperties": false
+        },
+        "existing_surfaces": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+                "$ref": "#/$defs/surface"
+            }
+        },
+        "pilot_extension_seam": {
+            "type": "object",
+            "required": [
+                "name",
+                "reason",
+                "likely_paths"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "reason": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "likely_paths": {
+                    "$ref": "#/$defs/stringList"
+                }
+            },
+            "additionalProperties": false
+        },
+        "dependency_map": {
+            "type": "object"
+        },
+        "evidence_references": {
+            "$ref": "#/$defs/stringList"
+        },
+        "exclusions": {
+            "$ref": "#/$defs/scopedReasons"
+        },
+        "widened_scope": {
+            "$ref": "#/$defs/scopedReasons"
+        },
+        "adopted_notes": {
+            "$ref": "#/$defs/stringLists"
+        },
+        "checks_discovered": {
+            "$ref": "#/$defs/stringLists"
+        },
+        "blockers": {
+            "$ref": "#/$defs/stringList"
+        }
+    },
+    "additionalProperties": false,
+    "$defs": {
+        "stringList": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "minLength": 1
+            },
+            "uniqueItems": true
+        },
+        "surface": {
+            "type": "object",
+            "required": [
+                "paths",
+                "facts"
+            ],
+            "properties": {
+                "paths": {
+                    "$ref": "#/$defs/stringList"
+                },
+                "facts": {
+                    "$ref": "#/$defs/stringList"
+                }
+            },
+            "additionalProperties": false
+        },
+        "stringLists": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+                "$ref": "#/$defs/stringList"
+            }
+        },
+        "scopedReasons": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "scope",
+                    "reason"
+                ],
+                "properties": {
+                    "scope": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "additionalProperties": false
+            }
+        }
+    }
+}

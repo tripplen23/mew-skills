@@ -1,10 +1,10 @@
 ---
 name: behavior-contract
-description: "Extracts the observable behavior of a running system and produces a behavioral contract that defines what a migration must preserve. Labels each property as preserve, intentionally-change, deprecate, or unknown. Runs the system against representative inputs to capture observable behavior. Use after repo-cartographer has completed, when the user says \"extract behavior\" or \"build the contract\", or before planning a migration that must not break existing functionality."
+description: "Builds the behavioral contract for migration, authorized reconstruction, or feature adoption. Captures existing behavior, specifies requested behavior, labels each property, and records the oracle that will verify it. Use after repository mapping and before planning."
 license: MIT
 metadata:
   author: tripplen23
-  version: "0.1.0"
+  version: "0.2.0"
   mew-phase: OBSERVE+CONTRACT
 ---
 
@@ -12,7 +12,7 @@ metadata:
 
 ## Purpose
 
-Turn the repo inventory into an explicit, human-approved behavioral contract. The contract separates intentional behavior from historical accidents. It is the oracle that differential testing checks against.
+Turn the repo inventory and desired evolution into an explicit, human-approved behavioral contract. The contract separates existing behavior, new behavior, intentional changes, and historical accidents. It records which oracle can judge each property; it does not assume every property has an executable old implementation.
 
 ## Steps
 
@@ -29,15 +29,15 @@ For each surface in the inventory, capture actual behavior by running the system
 3. **Database effects**: Run operations against a test database. Record resulting rows, emitted events, side effects.
 4. **File I/O**: Record what files are read, written, and in what format.
 5. **Error paths**: Trigger each error condition. Record exact error message and behavior.
+6. **Streaming / event interfaces**: For SSE, WebSocket, or any incremental output, capture the *sequence and interleaving* of events against the running system, not just the final content. Order and grouping (e.g. text vs tool-call events) are observable behavior. Observe the live stream end to end — a green unit suite does not prove the consumer renders stream order faithfully.
 
 Use `scripts/capture_behavior.py` to automate capture for common patterns. For custom systems, write a capture script specific to the project.
 
-For a **feature adoption**, separate three evidence classes:
+For a **feature adoption or reconstruction**, separate three evidence classes:
 
-1. current target behavior, which is the preservation oracle;
-2. requested new behavior, which becomes target contract properties;
-3. reference implementations, which provide design and protocol evidence but
-   do not redefine the target's existing behavior.
+1. current target behavior, which may provide executable baseline, characterization, or regression oracles;
+2. requested target behavior, labeled `introduce`; use `contract-spec` by default, or `authorized-reference` only when an executable reference and authorization are recorded;
+3. other references, which remain design evidence and do not redefine target behavior.
 
 Pin reference revisions, record their licenses, and prefer official API and SDK
 documentation over reverse-engineered community behavior. If the requested
@@ -50,7 +50,7 @@ claiming compatibility from a nominally similar endpoint.
 
 ### Step 3: Build the property list
 
-For each observed behavior, create a contract property entry:
+For each existing or requested behavior, create a contract property entry with a structured `oracle`; keep captured observations in `evidence`:
 
 ```yaml
 - id: P001
@@ -58,20 +58,35 @@ For each observed behavior, create a contract property entry:
   path: GET /api/v1/users/{id}
   property: "Returns 200 with user object when user exists"
   preservation: preserve
+  oracle:
+    kind: executable-baseline
+    command: "curl --fail http://baseline/api/v1/users/42"
   evidence:
     input: { id: 42 }
     output: { status: 200, body: { id: 42, name: "Alice" } }
     capture_method: live_request
+
+- id: P002
+  surface: api
+  path: POST /api/v1/chat:stream
+  property: "Emits text chunks in generation order"
+  preservation: introduce
+  oracle:
+    kind: contract-spec
+    assertion: "received chunk sequence equals generated chunk sequence"
 ```
+
+Allowed oracle kinds are `executable-baseline`, `authorized-reference`, `characterization`, `regression`, `contract-spec`, and `unresolved`. `authorized-reference` requires explicit authorization evidence; `unresolved` is valid only while the property remains `unknown`.
 
 ### Step 4: Label each property
 
-Assign one of four labels:
+Assign one of five labels:
 
-- **preserve**: The new implementation must produce equivalent observable behavior. This is the default.
-- **intentionally-change**: The migration deliberately alters this behavior. Requires human approval and a reason.
-- **deprecate**: The behavior is being removed. Requires human approval.
-- **unknown**: Cannot determine if behavior is intentional. Becomes a discovery task — run the system, search issues, ask maintainers.
+- **preserve**: Existing observable behavior must remain equivalent. Use an executable baseline when available; otherwise pin a characterization or regression oracle.
+- **introduce**: Brand-new target behavior. Use `contract-spec` unless an explicitly authorized executable reference provides the comparison oracle.
+- **intentionally-change**: Existing behavior is deliberately altered. Requires human approval, a reason, and old/new expectations.
+- **deprecate**: Existing behavior is being removed. Requires human approval.
+- **unknown**: Cannot determine whether behavior is intentional. Becomes a discovery task — run the system, search issues, ask maintainers.
 
 Unknowns are NOT permission to guess. They must be resolved before the contract is approved.
 
@@ -86,11 +101,12 @@ List all properties labeled `intentionally-change` with:
 ### Step 6: Human approval gate
 
 Present the contract to the user. The user must approve:
-1. The set of `preserve` properties
-2. Each `intentionally-change` and `deprecate` decision
-3. Resolution of all `unknown` properties
+1. The set of `preserve` properties and their oracles
+2. The set of `introduce` properties and their contract-test assertions
+3. Each `intentionally-change` and `deprecate` decision
+4. Resolution of all `unknown` properties
 
-Do NOT proceed to migration planning until the contract is approved. Save the approval as an evidence entry.
+When this skill is invoked by `mew-migration`, write a schema-valid draft without `approved_by` / `approved_at`, return control for planning, and let the orchestrator run one combined contract-and-plan approval gate. After approval, populate both fields before implementation. When used standalone, request approval here before planning.
 
 ### Step 7: Write artifacts
 
@@ -99,13 +115,11 @@ Do NOT proceed to migration planning until the contract is approved. Save the ap
 
 ## Gotchas
 
-- **Capture behavior, not code structure.** The contract describes what the system does, not how it does it. Internal refactoring is allowed; observable behavior changes require approval.
-- **Reference code is not the oracle.** It can reveal an extension seam or protocol fact, but target preservation properties still come from the target baseline and new properties still come from explicit user intent.
-- **Normalization rules must be explicit.** If you compare outputs, define exactly what counts as equivalent (e.g., "JSON key order may differ, whitespace may differ, timestamps must match within 1 second"). Classify every numerical output into a tolerance class: `exact` (bit-identical), `isclose` (PEP 485: `abs(a-b) <= max(rel_tol * max(abs(a),abs(b)), abs_tol)`, default `rel_tol=1e-9, abs_tol=1e-12`), `ulps` (for algorithms where ULP-level drift is acceptable), or `custom`. Use `allow_nan=False` on both sides to avoid NaN-vs-error mismatches (Python `json` emits NaN/Infinity by default; Rust `serde_json` rejects them).
-- **Determinism hazards to neutralize before comparing.** Set `PYTHONHASHSEED=0` (hash randomization is on by default since Python 3.3). Serialize with `sort_keys=True`. Handle `NaN != NaN` in IEEE 754 (use `math.isnan` / `f64::is_nan`, not `==`). Pin `TZ` and `SOURCE_DATE_EPOCH`. Define a single `canonicalize(value)` used on both sides before comparison.
-- **Side effects are behavior.** Database writes, file creation, event emission, log output — all are part of the behavioral contract.
-- **Performance can be behavior.** If users depend on response time, include a latency budget in the contract. Set budgets before migration so regressions cannot be rationalized away.
-- **debug_assert vs assert.** A side effect inside debug_assert! disappears in release builds. The contract must specify whether assertion behavior is preserved or intentionally changed.
+- **Describe behavior, not implementation.** Internal structure may change; observable properties require explicit labels and oracles.
+- **Order and side effects are behavior.** Include stream/event order, database writes, files, logs, and emitted events when users can observe them.
+- **References are design evidence by default.** Use `authorized-reference` only with recorded authorization and an executable comparison.
+- **Make equivalence explicit.** Record normalization, tolerances, locale, timezone, clock, randomness, and serialization rules before comparing outputs.
+- **Use measurable budgets.** Add performance properties only when users depend on them, and approve limits before implementation.
 
 ## Output format
 
@@ -123,6 +137,9 @@ properties:
     path: GET /api/v1/users/{id}
     property: "Returns 200 with user object when user exists"
     preservation: preserve
+    oracle:
+      kind: executable-baseline
+      command: "curl --fail http://baseline/api/v1/users/42"
     evidence: { ... }
 
   - id: P002
@@ -130,11 +147,14 @@ properties:
     path: GET /api/v1/users/{id}
     property: "Returns 404 with {error: 'not_found'} when user does not exist"
     preservation: preserve
+    oracle:
+      kind: regression
+      assertion: "missing user returns status 404 and error=not_found"
     evidence: { ... }
 
 intentional_changes:
   - id: C001
-    property: P010
+    property_ref: P010
     what: "Replace X-Debug header with X-Request-ID"
     why: "Python-specific, not needed in Go"
     risk: low

@@ -1,42 +1,35 @@
 ---
 name: mew-migration
-description: "Orchestrates an evidence-driven, behavior-preserving migration or feature adoption from a short request. Use when the user asks to migrate, port, rewrite, transplant, or add a capability from reference implementations while preserving existing behavior. Requires only a target repository and desired evolution; creates the run, loads the phase skills, produces validated artifacts, and stops for human approval before implementation."
+description: "Orchestrates and resumes evidence-driven migrations, authorized reconstructions, clones, and feature adoptions. Use when the user asks to migrate, port, rewrite, transplant, reproduce, continue, recover, or inspect unfinished Mew work. Classifies oracle presence, selects contract-only, mixed, or differential verification, keeps a durable progress view across compaction and sessions, and stops for human approval before implementation."
 license: MIT
 compatibility: "OpenCode, Kiro, Hermes, and Agent Skills-compatible clients"
 metadata:
   author: tripplen23
-  version: "0.4.0"
+  version: "0.6.0"
   mew-phase: END_TO_END
 ---
 
 # Mew Migration
 
-Turn a short migration request into a bounded Mew run. This skill owns orchestration; the phase skills own specialized reasoning. Do not make the user restate the workflow, artifact paths, schemas, or phase order.
+Turn a migration, reconstruction, clone, or feature-adoption request into a bounded Mew run. This skill owns orchestration; the phase skills own specialized reasoning. Do not make the user restate the workflow, artifact paths, schemas, or phase order.
 
 ## When to use
 
 Load this skill when the user asks to:
 
 - migrate or port an implementation while preserving behavior;
+- reconstruct or clone an authorized app, system, workflow, or individual feature from observable behavior;
+- reproduce a UX or protocol in a target repository without treating the reference as the preservation oracle;
 - replace a framework, language, SDK, service, or provider;
 - adopt a capability from one or more reference implementations;
+- resume, inspect, or recover an unfinished Mew run after compaction, handoff, or a new session;
+- sync stale progress with approved artifacts and verification evidence;
 - rewrite a subsystem with evidence-backed parity;
 - run the complete Mew workflow rather than one isolated phase.
 
-Some teams keep project-local adopted-skill notes in the **skill pack** (not the
-target) under `<pack>/projects/<project-id>/skill-adopted/`, where `<pack>` is
-the checked-out pack you resolve schemas and policies from (see Host behavior).
-These notes are a git-ignored local scratchpad; they are not part of the copied
-`.agents/mew-skills` anchor, so read them from the pack checkout, not the target
-tree. Resolve `<project-id>` from the **target's** git remote as the repository
-name — the segment after the last `/`, without `.git` (e.g.
-`github.com/tripplen23/mew` → `mew`) — falling back to the target's repository
-directory name when there is no remote. Load a note only when its
-`<project-id>` matches the current target and its declared scope is
-`repo:<project-id>`. Read matching notes as local guidance: do not assume they
-are universal, and do not require them for users who do not have them.
+If the target has project-local adopted notes, resolve and apply them through `references/project-notes.md`. Ignore notes for other repositories and do not make local obligations universal.
 
-For browser reconstruction, load `browser-observation` as the observation driver. For a single already-established phase, use that phase skill directly.
+For reconstructing a running system (web, TUI, mobile, desktop, device, etc), load `observation` as the observation driver. For a single already-established phase, use that phase skill directly.
 
 ## Minimum input
 
@@ -86,8 +79,9 @@ Unless the user overrides them:
 - Network: deny except approved documentation, source, and dependency endpoints
 - SDK selection: official SDK first; record any exception
 - Implementation gate: human approval of the contract and migration plan
+- Durable progress: `run-state.json`, refreshed from canonical artifacts and evidence
 
-Write a `migration-request.json` first and validate it against `schemas/migration-request.schema.json`. Record inferred values explicitly so the user can correct them.
+Write a `migration-request.json` first and validate it against `schemas/migration-request.schema.json`. Record inferred values explicitly so the user can correct them. Decompose every top-level requested capability into a stable `W###` item in `run-state.json` and append one `work_items_initialized` evidence entry before mapping or implementation.
 
 ## Scope modes
 
@@ -102,6 +96,63 @@ Choose the smallest mode that fits the request:
 
 Do not force three pilot units onto a bounded feature adoption. Scale inventory, evidence, and testing to the observable surfaces affected by the request.
 
+## Verification route: oracle presence
+
+Classify each contract property by its structured `oracle.kind` before loading an implementation skill:
+
+- `contract-spec`, `characterization`, or `regression` — deterministic checks without an old-vs-new executable comparison.
+- `executable-baseline` — replayable target baseline suitable for differential testing.
+- `authorized-reference` — an explicitly authorized, executable original suitable for reconstruction parity; the property may remain `introduce` relative to the target while still being differential-eligible.
+- `unresolved` — valid only for an `unknown` property. Resolve it before approval or exclude it from verification with passing run-bound `property_deferred` evidence naming the property and `decision: defer`.
+
+Define the **in-scope verification set** as every approved contract property, including preservation properties, except explicitly deferred unknowns. A deferred unknown remains in the contract for traceability but has no plan-unit ownership, check, parity result, or contribution to parity totals. After drafting the contract, derive a provisional route; after building the plan, finalize it from every property in this set and record the decision in `evidence.jsonl` and the approval summary:
+
+- **`contract-only`** — no property in the set has an `executable-baseline` or `authorized-reference` oracle. This covers greenfield `introduce` properties and existing behavior verified by characterization/regression tests. Do not load `differential-migration`.
+- **`mixed`** — some properties in the set have executable baseline/reference oracles and others use contract, characterization, or regression oracles. Load differential guidance for every executable property, including executable preservation properties.
+- **`differential`** — all properties in the set are judged against executable baseline/reference oracles. Differential testing is the primary parity signal.
+
+Derive the route from the contract's oracle objects and the plan's in-scope property set; do not add a second editable `verification_route` field that can drift. Keep every route's common gates: contract, approval, provenance, `analyze_run`, regression checks, and a parity report. An external reference is design evidence by default and becomes an `authorized-reference` oracle only when authorization is recorded explicitly.
+
+Common mixed case: adding streaming to an endpoint that already returns a non-streaming response. `assemble(stream(input)) == old_response(input)` is an executable oracle for the assembled result, while chunk ordering, flush cadence, mid-stream errors, and cancellation are introduced properties verified by contract tests.
+
+## Parallel execution policy
+
+Keep the evidence and decision spine sequential: baseline lock, contract merge and grill, human approval, all designated pilot units in dependency order, shared protocol/schema/data changes, deterministic merge, and final verification. Parallelism must not let workers redefine scope, approve behavior, or write the same canonical artifact.
+
+Parallelize only independent leaves:
+
+- After scope and revisions are pinned, inspect separate references, map independent target surfaces, and run isolated observation scenarios concurrently. Workers return evidence fragments; the orchestrator serializes updates to the contract, plan, and `evidence.jsonl`.
+- After every designated pilot passes, run dependency-ready non-pilot units concurrently when all `depends_on` units passed, normalized repository-relative `target_paths` do not overlap, mutable test resources are isolated, and each unit has one writer. A directory overlaps its descendants; resolved aliases and undeclared generated writes require serialization.
+- Treat shared protocols, schemas, database state, generated outputs, lock/build files, benchmarks, and integration tests as ordering constraints. Add `depends_on` edges when path separation alone does not express the conflict.
+- Merge completed units in deterministic dependency order, rerun affected checks after each merge or wave, and block failed units plus their dependents without discarding valid evidence from unrelated units.
+
+Derive execution waves from the existing plan; do not add `parallel_groups` or a scheduler field unless a real run proves that dependencies and resource isolation cannot express the conflict.
+
+## Resume and progress sync
+
+Treat `run-state.json` as a mutable progress view, not an approval-bearing source of truth. Approved request, contract, and plan define intended work; parity, validation, and append-only evidence prove completed work; repository code is corroborating evidence. Conversation history is never durable state.
+
+At every invocation, compaction return, or session handoff, classify intent from the request and repository context rather than matching a magic phrase:
+
+1. A clear new migration request creates a new run.
+2. Continuation, remaining-work, or recovery intent scans `.mew/runs/*/run-state.json` for relevant unfinished root runs. A root state has no `parent`.
+3. Resume the single relevant root. If multiple roots plausibly match, present their IDs and goals for selection; never choose only by newest timestamp.
+4. Load its `focus_item`, referenced child runs, approved artifacts, and relevant evidence before selecting work.
+5. Legacy runs without state require an explicit progress-sync proposal; do not infer completion silently.
+
+Sync progress before continuing:
+
+- Restore any item recorded by `work_items_initialized` or `work_item_added` that disappeared from state.
+- Add or repair a child link only when both parent and child artifacts identify the relationship unambiguously.
+- Mark an item `done` only when its approved scope has passing parity and required validation evidence. Code or tests merely existing is not completion. Append run-bound `work_item_done` with exact `contract_properties`, `plan_units`, `run_refs`, and SHA-256 hashes of contract, plan, and parity before changing the status.
+- Keep implemented but unverified work `in_progress` with verification as `next_action`. Use `blocked` when ownership, approval, or evidence is ambiguous.
+- Downgrade stale `done` state when its completion evidence no longer passes.
+- Record every automatic repair as `progress_synced` in `evidence.jsonl`; ask only when the repair is not deterministic.
+
+For a multi-capability program, keep the root work-item ledger in the original run. A separately approved capability run writes `parent.run_id` plus `parent.item_id`; the parent item records the child ID in `run_refs`. Child completion does not complete broader parent scope that the child explicitly deferred. Parallel workers never write state; the coordinator serializes state and evidence updates.
+
+Update state after approval, work start, verification, defer/cancel decisions, and before compaction or handoff. Never delete a work item: mark it `deferred` or `cancelled` with human decision evidence. Keep at most one `focus_item`, but allow multiple `in_progress` items when the parallel policy permits them.
+
 ## Workflow
 
 ### 1. Intake and lock
@@ -111,7 +162,8 @@ Do not force three pilot units onto a bounded feature adoption. Scale inventory,
 3. Observation may begin on a dirty tree, but do not establish a baseline or edit until the user resolves uncommitted changes.
 4. Create the run directory and `migration-request.json`.
 5. Create `manifest.json`, `repro.json`, `provenance.json`, and `evidence.jsonl`.
-6. Record the skill-pack commit and all reference revisions used.
+6. Create `run-state.json` from every top-level requested capability, validate it against `schemas/run-state.schema.json`, append run-bound `work_items_initialized`, and hash the exact request bytes into `request_sha256`.
+7. Record the skill-pack commit and all reference revisions used.
 
 ### 2. Map the target
 
@@ -128,22 +180,7 @@ Produce `repo-inventory.yaml`. Do not inventory unrelated subsystems merely to m
 
 Load `behavior-contract` for target behavior. References are design evidence, not the behavioral oracle.
 
-Produce a structured observation for each reference **before touching the target
-source or writing any code**. See `references/reference-inspection.md` for the
-minimum per-reference format. A web search result is not sufficient — inspect
-source files, documentation, or API docs and cite exact evidence in the run's
-`evidence.jsonl`.
-
-For every reference implementation you must:
-
-1. pin a revision or retrieval timestamp to the nearest minute;
-2. inspect official documentation and official SDKs before community code;
-3. extract architecture, configuration, authentication, routing, dispatch,
-   error-mapping, and model/feature selection relevant to the request;
-4. record provenance and license constraints (exact SPDX identifier);
-5. distinguish reusable protocol facts from implementation-specific choices;
-6. produce `reference-<name>.md` with all findings and append to evidence;
-7. never copy code whose license or provenance is unresolved.
+For each named reference, follow `references/reference-inspection.md`: pin it, inspect primary artifacts rather than search snippets, record license/provenance, separate portable behavior from implementation choices, and write `reference-<name>.md` plus evidence before implementation. Stop on unresolved authorization or licensing.
 
 If a project-local adopted-skill note adds domain-specific reference-analysis
 questions, answer them before implementation. Otherwise use the generic
@@ -167,8 +204,7 @@ Ask targeted questions, then stop for answers. Cover at minimum:
 - **Naming and identity** — will new names collide with or shadow existing ones?
   Propose renames explicitly rather than reusing an overloaded term.
 - **Compatibility** — what existing behavior must stay byte-for-byte identical?
-- **Verification** — which formatter, linter, and test commands does the repo
-  use? (These become the handoff gate.)
+- **Verification** — discover formatter, linter, and test commands from project files and CI. Ask the user only if the repository leaves competing or ambiguous gates.
 
 Grill only until the decision tree is resolved; do not interrogate settled
 points. Record answers in `evidence.jsonl` with a `grill` action. A request that
@@ -179,12 +215,15 @@ starting point, not the contract.
 
 Produce `behavioral-contract.yaml` containing:
 
-- existing properties that must remain unchanged;
-- new properties required by the desired evolution;
+- existing properties that must remain unchanged, labeled `preserve`;
+- new properties required by the desired evolution, labeled `introduce`;
 - intentional changes, if any;
 - unknowns and blockers;
 - exact normalization and tolerance rules;
+- the structured oracle for each property (`kind` plus executable command, artifact, assertion, or authorization evidence as applicable);
 - tests or observations supporting each property.
+
+Derive the provisional verification route now. Do not wait until implementation to discover that a supposed differential oracle cannot be executed.
 
 If a project-local adopted-skill note adds contract checklist items, include
 them and cite the note in `evidence.jsonl`. Otherwise keep the contract generic.
@@ -209,11 +248,12 @@ when they apply to the approved scope.
 
 ### 7. Human approval gate
 
-Stop after the contract and plan are schema-valid. Present:
+Finalize the verification route from the contract and pilot plan. Stop after both artifacts are schema-valid **and mutually consistent**: run `python3 scripts/analyze_run.py <run-dir>` and resolve every problem before presenting for approval. This catches properties no unit owns, plan units citing properties that do not exist, unapproved intentional changes, and dependency cycles — gaps that each artifact hides on its own. Present:
 
 - source lock and candidate location;
 - preservation properties;
 - requested new properties;
+- verification route (`contract-only`, `mixed`, or `differential`) and oracle for each pilot property;
 - unknowns and blockers;
 - proposed files and dependencies;
 - test and rollback plan;
@@ -223,11 +263,13 @@ Stop after the contract and plan are schema-valid. Present:
 Ask exactly:
 
 ```text
-Approve migration behavior before implementation?
+Approve Mew behavior before implementation?
 
 - Preservation properties:
 - New properties:
 - Intentional changes:
+- Verification route:
+- Oracle mapping:
 - Proposed files/dependencies:
 - Verification plan:
 - Unknowns/blockers:
@@ -235,20 +277,26 @@ Approve migration behavior before implementation?
 Reply approve / revise / abort.
 ```
 
-Do not treat the original request as approval of the detailed contract. Do not modify production source before explicit approval.
+After the user approves, write `approved_by` and `approved_at` into the contract, append run-bound approval evidence containing those exact values and the contract SHA-256, and rerun schema plus consistency checks. This approval entry must precede implementation and every `work_item_done`; a later attestation cannot repair missing pre-implementation approval. Keep evidence timestamps timezone-aware and nondecreasing in append order; append order breaks equal-timestamp ties, and never replay an old lifecycle entry. Do not modify production source before those checks pass. The original request is not approval of the detailed contract. At handoff, append `final_verification` only after every terminal work-item event, and bind it to the current contract, plan, and parity SHA-256 hashes so stale checks cannot complete the run.
 
 ### 8. Implement and verify
 
-After approval, load `differential-migration` and implement only the approved pilot.
+After approval, load only the implementation context selected by the route:
+
+- **`contract-only`** — do **not** load `differential-migration`. Implement the approved pilot directly from the contract and plan, then run the declared contract, characterization, and regression checks for every property in the in-scope verification set.
+- **`mixed`** — load `differential-migration` for every property in the set using `executable-baseline` or `authorized-reference`, including preservation properties; run the declared non-executable checks for the rest.
+- **`differential`** — load `differential-migration` and compare every property in the set with its executable baseline or authorized reference.
+
+For every route:
 
 1. Work in the candidate, never the immutable baseline.
-2. Add characterization or regression tests before changing behavior.
-3. Use official SDKs where one exists; do not hand-roll an API protocol to save time.
-4. Run focused checks after each change and the full discovered CI-equivalent suite before handoff.
-5. Compare baseline and candidate at the contracted boundary.
+2. Implement only the approved pilot and property set.
+3. Add characterization or regression tests before changing existing behavior; add contract tests for introduced behavior.
+4. Use official SDKs where one exists; do not hand-roll an API protocol to save time.
+5. Run focused checks after each change and the full discovered CI-equivalent suite before handoff.
 6. Classify every mismatch; never weaken the contract or test to obtain a pass.
-7. Produce a schema-valid `parity-report.json` and append command outcomes to evidence.
-8. Before handoff, the target's own formatter, linter, and test suite must all pass on the candidate. Discover them from the repo (e.g. `cargo fmt --check` + `cargo clippy -- -D warnings` + `cargo test`, `ruff`/`pytest`, `eslint`/`vitest`) and record each command with its exit code in evidence. A formatting- or lint-only failure is a failed run, not a stylistic footnote — CI will reject it.
+7. Produce a schema-valid `parity-report.json` with exactly one result for every property in the in-scope verification set. Set `total_properties == len(results) == passed + mismatches`; explicitly deferred unknowns contribute to none of these values. Append all command outcomes to evidence and omit `old_output` when no executable comparison exists.
+8. Before handoff, the target's own formatter, linter, and test suite must all pass on the candidate. Discover them from the repo (e.g. `cargo fmt --check` + `cargo clippy -- -D warnings` + `cargo test`, `ruff`/`pytest`, `eslint`/`vitest`) and record each command with its exit code in evidence. Append one run-bound `final_verification` entry containing the successful command list. A formatting- or lint-only failure is a failed run, not a stylistic footnote — CI will reject it.
 
 If a project-local adopted-skill note requires extra executable checks, run them
 before claiming parity.
@@ -259,6 +307,7 @@ A run is complete only when it has:
 
 - `migration-request.json`
 - `manifest.json`
+- `run-state.json` with no `pending`, `in_progress`, or `blocked` items
 - `repro.json`
 - `provenance.json`
 - `repo-inventory.yaml`
@@ -267,48 +316,25 @@ A run is complete only when it has:
 - `migration-plan.yaml`
 - `evidence.jsonl`
 - `parity-report.json`
-- every run artifact schema-valid: `python3 scripts/validate_run.py <run-dir>` exits 0
+- final run validation passes: `python3 scripts/validate_run.py --final <run-dir>`
+- final cross-artifact analysis passes: `python3 scripts/analyze_run.py --final <run-dir>`
 - the target's formatter, linter, and test suite all green on the candidate, with each command and exit code in evidence
 - exact verification commands and exit states
 - remaining risks, unknowns, and rollback instructions
 
 Do not claim parity from a green unit-test suite alone.
 
-### 10. Retro — self-healing skill evolution
+### 10. Retro
 
-A run does not end at handoff. After the user reviews the diff and is satisfied,
-run a short retrospective so the pack learns from this run. This is what makes
-mew-skills **self-healing**: each real run hardens the skills through evidence,
-not opinion. (This is prompt/artifact evolution with a human gate — not model
-retraining and not automated RLHF.)
-
-Ask the user exactly three questions:
-
-```text
-Retro (helps future migrations):
-
-1. Any regression or defect that slipped past the gates this run?
-2. Any loop or question that was wasted effort?
-3. Anything the skill should have known so you were not asked?
-
-Reply, or say "skip".
-```
-
-Follow `references/skill-evolution.md` to classify answers by oracle and lesson
-tier, apply anti-bloat and holdout rules, and write
-`proposed-skill-changes.md` into the run directory. Never edit the shared skill
-pack from a migration run; the maintainer reviews the proposal like a pull
-request. If the user skips retro, record that choice and stop.
+After user review, ask what escaped the gates, what work was wasted, and what the skill should have known. If the user responds, follow `references/skill-evolution.md` and write `proposed-skill-changes.md` inside the run. Never modify the shared pack automatically; if the user skips, record that choice.
 
 ## Host behavior
 
-When this skill is loaded in any host:
-
-1. Load each phase skill when its phase begins, using the host's skill mechanism (OpenCode's native `skill` tool; Kiro's automatic activation or `/skill-name` slash command; or the equivalent on other Agent Skills clients).
-2. Do not ask the user to paste or enumerate the component skills.
-3. Resolve shared schemas and policies from `.agents/mew-skills/` when installed by `scripts/install-agent-skills.py`; otherwise locate the checked-out pack once and reuse that path.
-4. Keep artifacts under the target's `.mew/runs/`, not inside the skill repository.
-5. If a component skill conflicts with this orchestrator on phase order, approval, scope sizing, or artifact location, this orchestrator wins.
+1. Load each component skill only when its phase or verification route requires it.
+2. Before creating or continuing work, discover and sync relevant run state from repository context; do not depend on an exact resume phrase.
+3. Resolve the pack path once; keep all run artifacts under the target's `.mew/runs/`.
+4. Do not ask the user to enumerate component skills or restate workflow internals.
+5. This orchestrator wins conflicts about phase order, approval, scope sizing, artifact location, and progress ownership.
 
 ## Failure and stop conditions
 
@@ -326,7 +352,7 @@ A blocker is a valid Mew result. Do not fabricate support or substitute a merely
 
 ## References
 
-- `references/reference-inspection.md` — minimum per-reference structured observation format
-- `references/skill-evolution.md` — self-healing retro, lesson tiers, anti-bloat rules, and holdout evaluation
-- OpenCode Agent Skills: https://opencode.ai/docs/skills/
-- Component skills: `repo-cartographer`, `behavior-contract`, `migration-planner`, `differential-migration`, `browser-observation`
+- `references/reference-inspection.md` — per-reference observation format
+- `references/project-notes.md` — optional repository-specific guidance
+- `references/skill-evolution.md` — retro and reviewed skill evolution
+- Component skills: `repo-cartographer`, `behavior-contract`, `migration-planner`, `differential-migration`, `observation`

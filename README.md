@@ -1,31 +1,34 @@
 # mew-skills
 
-Evidence-driven skills for behavior-preserving software migration.
+Evidence-driven skills for software migration, authorized reconstruction/cloning, and feature adoption.
 
-The pack is designed as a **self-healing skill system**: real migrations feed
-reviewed regression evidence back into references, fixtures, schemas, and hard
-gates. This is prompt/artifact evolution with human approval.
+The pack is designed as a **self-healing skill system**: real runs feed reviewed
+regression evidence back into references, fixtures, schemas, and hard gates.
+This is prompt/artifact evolution with human approval.
 
-The `mew-migration` skill turns a short request into an end-to-end run. Phase
-skills handle repository mapping, observable-behavior capture, planning, and
-differential verification on demand.
+The `mew-migration` skill turns a short migration, clone/reconstruction, or
+feature request into an end-to-end run. It selects contract-only, mixed, or
+differential verification from the approved behavior and available oracle.
+Phase skills handle repository mapping, observable-behavior capture, planning,
+and specialized verification on demand.
 
 ## Skills
 
-| Skill                    | Phase              | What it does                                                                                                                                                                                                                 |
-| ------------------------ | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mew-migration`          | END TO END         | Orchestrates the complete workflow from two required inputs: target repository and desired evolution. Creates artifacts and stops for approval before implementation.                                                        |
-| `repo-cartographer`      | INGEST + REPRODUCE | Inventory source repo: public APIs, CLI, file formats, DB effects, env vars, telemetry, platforms, perf. Lock source commit.                                                                                                 |
-| `behavior-contract`      | OBSERVE + CONTRACT | Capture the running system's observable behavior. Produce a behavioral contract with each property labeled preserve / change / deprecate / unknown. Includes characterization tests, golden master, and metamorphic testing. |
-| `migration-planner`      | MIGRATION PLAN     | Build a semantic map, select pilot slices, define migration units, set stop conditions and performance budgets. Uses Strangler Fig and Branch By Abstraction patterns.                                                       |
-| `differential-migration` | IMPLEMENT + VERIFY | Implement target-language slices, run differential tests against the old implementation, produce a parity report. 9-class failure taxonomy (McKeeman 1998).                                                                  |
-| `browser-observation`    | OBSERVE + VERIFY   | Reconstruct authorized web apps with a five-channel evidence model (DOM/a11y, network, console, pixels, vision). Vision is never the sole oracle.                                                                            |
+| Skill                    | Phase              | What it does                                                                                                                                                                                                                                           |
+| ------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `mew-migration`          | END TO END         | Orchestrates and resumes migration, authorized reconstruction/cloning, and feature adoption. Selects verification by oracle presence, maintains durable progress across sessions, and stops for approval before implementation.                        |
+| `repo-cartographer`      | INGEST + REPRODUCE | Inventory source repo: public APIs, CLI, file formats, DB effects, env vars, telemetry, platforms, perf. Lock source commit.                                                                                                                           |
+| `behavior-contract`      | OBSERVE + CONTRACT | Capture observable behavior and required evolution. Label properties preserve / introduce / intentionally-change / deprecate / unknown, with baseline, characterization, regression, or contract-spec oracles.                                         |
+| `migration-planner`      | MIGRATION PLAN     | Build a semantic map, select pilot slices, define migration units, set stop conditions and performance budgets. Uses Strangler Fig and Branch By Abstraction patterns.                                                                                 |
+| `differential-migration` | IMPLEMENT + VERIFY | Implement target-language slices, run differential tests against the old implementation, produce a parity report. 9-class failure taxonomy (McKeeman 1998).                                                                                            |
+| `observation`            | OBSERVE + VERIFY   | Reconstruct an authorized running system (web, TUI, mobile, desktop, device) with a five-channel evidence model (structure, I/O contract, diagnostics, state capture, vision). Ships a Web/Playwright driver profile. Vision is never the sole oracle. |
 
 ## Schemas
 
 JSON Schema files validate every artifact a skill produces:
 
 - `schemas/run-manifest.schema.json` — run identity, source lock, tool registry
+- `schemas/run-state.schema.json` — resumable work items, focus, and parent/child run links
 - `schemas/migration-request.schema.json` — normalized intake for a short end-to-end request
 - `schemas/behavioral-contract.schema.json` — property list with preservation labels
 - `schemas/migration-plan.schema.json` — semantic map, pilot units, stop conditions
@@ -33,6 +36,7 @@ JSON Schema files validate every artifact a skill produces:
 - `schemas/evidence.schema.json` — evidence.jsonl entry format
 - `schemas/repro.schema.json` — Phase 0 reproducible environment pin
 - `schemas/provenance.schema.json` — provenance & licensing (SPDX, SLSA)
+- `schemas/repo-inventory.schema.json` — scoped target surfaces, dependencies, evidence references, and exclusions
 
 ## Policies
 
@@ -61,9 +65,7 @@ bash scripts/validate.sh
 
 Checks: `agentskills validate` on every skill, JSON Schema syntax, frontmatter security (no `< >`), `name` == directory name.
 
-Validation also enforces a 500-line cap per `SKILL.md` and validates the pinned
-holdout manifest. Universal skill changes are evaluated against a non-Mew,
-non-Rust holdout before promotion.
+Validation also enforces a 500-line cap per `SKILL.md` and validates the pinned holdout manifest.
 
 `validate.sh` checks the pack itself. To gate a **run's** artifacts against the
 schemas (the enforcement the skills instruct), point the run gate at a run dir:

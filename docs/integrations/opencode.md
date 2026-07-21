@@ -43,7 +43,7 @@ Start OpenCode from the target repository, not the parent directory. Ask:
 List the available Mew migration skills. Do not start a migration.
 ```
 
-The available skills should include `mew-migration`, `repo-cartographer`, `behavior-contract`, `migration-planner`, `differential-migration`, and `browser-observation`.
+The available skills should include `mew-migration`, `repo-cartographer`, `behavior-contract`, `migration-planner`, `differential-migration`, and `observation`.
 
 ## Invoke a migration
 

@@ -8,7 +8,8 @@
     "total_properties",
     "passed",
     "mismatches",
-    "verdict"
+    "verdict",
+    "results"
   ],
   "properties": {
     "run_id": {
@@ -16,28 +17,44 @@
       "description": "Format: YYYYMMDD-HHMMSS-<7char hash>"
     },
     "total_properties": {
-      "type": "integer"
+      "type": "integer",
+      "minimum": 1
     },
     "passed": {
-      "type": "integer"
+      "type": "integer",
+      "minimum": 0
     },
     "mismatches": {
-      "type": "integer"
+      "type": "integer",
+      "minimum": 0
     },
     "verdict": {
       "type": "string",
-      "enum": ["pass", "conditional_pass", "fail"]
+      "enum": [
+        "pass",
+        "conditional_pass",
+        "fail"
+      ]
     },
     "tolerance_class": {
       "type": "string",
-      "enum": ["exact", "isclose", "ulps", "custom"],
-      "description": "Numerical tolerance used for comparison (PEP 485 semantics for isclose)"
+      "enum": [
+        "exact",
+        "isclose",
+        "ulps",
+        "custom"
+      ],
+      "description": "Approved numerical tolerance used for comparison"
     },
     "results": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["property_id", "status"],
+        "required": [
+          "property_id",
+          "status"
+        ],
         "properties": {
           "property_id": {
             "type": "string",
@@ -45,13 +62,18 @@
           },
           "status": {
             "type": "string",
-            "enum": ["pass", "mismatch", "skip"]
+            "enum": [
+              "pass",
+              "mismatch"
+            ]
           },
           "old_output": {
-            "type": "object"
+            "type": "object",
+            "description": "Executable oracle output; omitted for non-executable oracle checks"
           },
           "new_output": {
-            "type": "object"
+            "type": "object",
+            "description": "Candidate output; omitted for non-executable oracle checks"
           },
           "normalized_equal": {
             "type": "boolean"
@@ -59,38 +81,107 @@
           "classification": {
             "type": "string",
             "enum": [
-              "real_regression",
-              "tolerance_miss",
-              "determinism_hazard",
-              "tolerated_difference",
-              "deliberate_change",
-              "dropped_behavior",
-              "performance_regression",
-              "license_provenance_break",
-              "reproducibility_break",
-              "intentional_change",
-              "normalization_gap",
               "regression",
+              "tolerance_miss",
+              "nondeterminism",
+              "intentional_change",
+              "deprecation",
+              "performance_regression",
+              "provenance_break",
+              "reproducibility_break",
+              "normalization_gap",
               "contract_gap"
             ]
           },
           "investigation": {
             "type": "string"
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "pass"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "properties": {
+                "normalized_equal": {
+                  "const": true
+                }
+              },
+              "not": {
+                "required": [
+                  "classification"
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "mismatch"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "required": [
+                "classification",
+                "investigation"
+              ],
+              "properties": {
+                "normalized_equal": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ],
+        "additionalProperties": false
       }
     },
     "performance": {
       "type": "array",
       "items": {
         "type": "object",
+        "required": [
+          "path",
+          "old_p95_ms",
+          "new_p95_ms",
+          "regression_pct",
+          "gate"
+        ],
         "properties": {
-          "path": { "type": "string" },
-          "old_p95_ms": { "type": "number" },
-          "new_p95_ms": { "type": "number" },
-          "regression_pct": { "type": "number" },
-          "gate": { "type": "string", "enum": ["PASS", "FAIL"] }
-        }
+          "path": {
+            "type": "string"
+          },
+          "old_p95_ms": {
+            "type": "number"
+          },
+          "new_p95_ms": {
+            "type": "number"
+          },
+          "regression_pct": {
+            "type": "number"
+          },
+          "gate": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "fail"
+            ]
+          }
+        },
+        "additionalProperties": false
       }
     }
   },
