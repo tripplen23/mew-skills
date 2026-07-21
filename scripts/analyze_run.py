@@ -53,6 +53,7 @@ SCHEMAS = {
     "state": "run-state.schema.json",
     "repro": "repro.schema.json",
     "provenance": "provenance.schema.json",
+    "inventory": "repo-inventory.schema.json",
     "contract": "behavioral-contract.schema.json",
     "plan": "migration-plan.schema.json",
     "parity": "parity-report.schema.json",
@@ -584,10 +585,26 @@ def analyze(
     all_prop_ids = set(prop_id_list)
     kind = {p.get("id"): p.get("preservation") for p in props if p.get("id")}
     to_verify = {pid for pid, label in kind.items() if label != "unknown"}
+    contract_run_id = contract.get("contract_id") if contract else None
+    deferred_unknowns = set()
+    for entry in evidence or []:
+        details = entry.get("details") or {}
+        if (
+            entry.get("action") == "property_deferred"
+            and entry.get("result") == "pass"
+            and details.get("run_id") == contract_run_id
+            and details.get("decision") == "defer"
+            and isinstance(details.get("property_id"), str)
+        ):
+            deferred_unknowns.add(details.get("property_id"))
 
     for pid, label in kind.items():
-        if label == "unknown":
+        if label == "unknown" and pid not in deferred_unknowns:
             problems.append(f"property {pid} is unresolved (preservation=unknown)")
+    for pid in sorted(deferred_unknowns - set(kind)):
+        problems.append(f"deferred evidence references unknown contract property {pid}")
+    for pid in sorted(deferred_unknowns & {pid for pid, label in kind.items() if label != "unknown"}):
+        problems.append(f"property {pid} is deferred but preservation is '{kind[pid]}', not 'unknown'")
 
     if final and contract and not (contract.get("approved_by") and contract.get("approved_at")):
         problems.append("final contract is missing approved_by or approved_at")
@@ -901,6 +918,30 @@ def _selfcheck() -> int:
     check(
         any("missing approved_by" in p for p in analyze(good_request, good_contract, good_plan, good_parity, final=True)),
         "unapproved final contract must fail",
+    )
+    deferred_contract = {
+        **good_contract,
+        "properties": good_contract["properties"] + [
+            {"id": "P004", "preservation": "unknown", "oracle": {"kind": "unresolved"}}
+        ],
+    }
+    deferred_evidence = [{
+        "action": "property_deferred",
+        "result": "pass",
+        "details": {"run_id": "R", "property_id": "P004", "decision": "defer"},
+    }]
+    check(
+        analyze(
+            good_request, deferred_contract, good_plan, good_parity,
+            evidence=deferred_evidence,
+        ) == [],
+        "explicitly deferred unknown must be excluded from verification accounting",
+    )
+    check(
+        any("P004 is unresolved" in problem for problem in analyze(
+            good_request, deferred_contract, good_plan, good_parity,
+        )),
+        "unknown without run-bound defer evidence must fail",
     )
 
     # Break every relationship at once and confirm each is reported.

@@ -16,7 +16,7 @@ Implement approved units and verify each contract property with the oracle decla
 
 A property is differential-eligible when `oracle.kind` is `executable-baseline` or `authorized-reference`, regardless of its preservation label. This includes an `introduce` property during authorized reconstruction when an executable reference and its authorization are recorded. Run the same inputs against the oracle and candidate at the contracted boundary.
 
-Properties with `contract-spec`, `characterization`, or `regression` oracles are not differential-eligible. Verify them with the corresponding contract, characterization, or regression test. An `unresolved` oracle blocks implementation unless the approved plan explicitly defers that property.
+Properties with `contract-spec`, `characterization`, or `regression` oracles are not differential-eligible. Verify them with the corresponding contract, characterization, or regression test. Define the **in-scope verification set** as every approved contract property except an `unknown` property explicitly deferred by run-bound `property_deferred` decision evidence. A deferred unknown remains in the contract for traceability but has no plan-unit ownership, executable check, parity result, or contribution to parity totals. Any other `unresolved` oracle blocks implementation.
 
 ## Steps
 
@@ -28,9 +28,10 @@ Proceed only when:
 
 - the plan is approved;
 - its derived route is `mixed` or `differential`, or the user explicitly requested differential testing; and
-- every in-scope property maps to a concrete oracle and check.
+- every property in the in-scope verification set maps to a concrete oracle and check; and
+- every excluded unknown has passing run-bound `property_deferred` evidence naming its property ID and `decision: defer`.
 
-For a `mixed` route, apply differential testing only to properties with executable oracles. Keep the non-executable properties in the same verification and parity report.
+For a `mixed` route, apply differential testing only to properties with executable oracles. Keep the non-executable properties in the same verification and parity report. Keep deferred unknowns out of both.
 
 ### Step 2: Implement pilot units
 
@@ -99,7 +100,7 @@ Expand only after pilot properties pass with reproducible evidence:
 
 ### Step 6: Produce the parity report
 
-The report is a root object conforming to `schemas/parity-report.schema.json`. Include every in-scope property, including properties verified by non-executable oracles; omit `old_output` and `new_output` when no executable comparison occurred.
+The report is a root object conforming to `schemas/parity-report.schema.json`. Include exactly one result for every property in the in-scope verification set, including properties verified by non-executable oracles; omit `old_output` and `new_output` when no executable comparison occurred. Do not emit results for deferred unknowns.
 
 ```yaml
 run_id: <run-id>
@@ -128,7 +129,7 @@ performance:
     gate: fail
 ```
 
-Check that `total_properties == passed + mismatches` and that `results` contains one entry per in-scope property.
+Check that `total_properties == len(results) == passed + mismatches` and that `results` contains exactly one entry per property in the in-scope verification set. Deferred unknowns contribute to none of these values.
 
 ### Step 7: Handoff
 

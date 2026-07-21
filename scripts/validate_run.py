@@ -48,11 +48,12 @@ ARTIFACTS = {
     "run-state.json": "run-state.schema.json",
     "repro.json": "repro.schema.json",
     "provenance.json": "provenance.schema.json",
+    "repo-inventory.yaml": "repo-inventory.schema.json",
     "behavioral-contract.yaml": "behavioral-contract.schema.json",
     "migration-plan.yaml": "migration-plan.schema.json",
     "parity-report.json": "parity-report.schema.json",
 }
-FINAL_REQUIRED = set(ARTIFACTS) | {"evidence.jsonl", "repo-inventory.yaml"}
+FINAL_REQUIRED = set(ARTIFACTS) | {"evidence.jsonl"}
 
 
 def load(path: Path):

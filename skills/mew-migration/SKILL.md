@@ -103,15 +103,15 @@ Classify each contract property by its structured `oracle.kind` before loading a
 - `contract-spec`, `characterization`, or `regression` — deterministic checks without an old-vs-new executable comparison.
 - `executable-baseline` — replayable target baseline suitable for differential testing.
 - `authorized-reference` — an explicitly authorized, executable original suitable for reconstruction parity; the property may remain `introduce` relative to the target while still being differential-eligible.
-- `unresolved` — valid only for an `unknown` property. Resolve or explicitly defer it before approval.
+- `unresolved` — valid only for an `unknown` property. Resolve it before approval or exclude it from verification with passing run-bound `property_deferred` evidence naming the property and `decision: defer`.
 
-After drafting the contract, derive a provisional route; after building the plan, finalize it from the approved pilot properties and record the decision in `evidence.jsonl` and the approval summary:
+Define the **in-scope verification set** as every approved contract property, including preservation properties, except explicitly deferred unknowns. A deferred unknown remains in the contract for traceability but has no plan-unit ownership, check, parity result, or contribution to parity totals. After drafting the contract, derive a provisional route; after building the plan, finalize it from every property in this set and record the decision in `evidence.jsonl` and the approval summary:
 
-- **`contract-only`** — no desired-evolution property has an `executable-baseline` or `authorized-reference` oracle. This covers greenfield `introduce` properties and existing behavior verified by characterization/regression tests. Do not load `differential-migration`.
-- **`mixed`** — some desired-evolution properties have executable baseline/reference oracles and others use contract, characterization, or regression oracles. Load differential guidance only for the executable subset.
-- **`differential`** — all desired-evolution properties are judged against executable baseline/reference oracles. Differential testing is the primary parity signal.
+- **`contract-only`** — no property in the set has an `executable-baseline` or `authorized-reference` oracle. This covers greenfield `introduce` properties and existing behavior verified by characterization/regression tests. Do not load `differential-migration`.
+- **`mixed`** — some properties in the set have executable baseline/reference oracles and others use contract, characterization, or regression oracles. Load differential guidance for every executable property, including executable preservation properties.
+- **`differential`** — all properties in the set are judged against executable baseline/reference oracles. Differential testing is the primary parity signal.
 
-Derive the route from the contract's oracle objects and the pilot plan; do not add a second editable `verification_route` field that can drift. Keep every route's common gates: contract, approval, provenance, `analyze_run`, regression checks, and a parity report. An external reference is design evidence by default and becomes an `authorized-reference` oracle only when authorization is recorded explicitly.
+Derive the route from the contract's oracle objects and the plan's in-scope property set; do not add a second editable `verification_route` field that can drift. Keep every route's common gates: contract, approval, provenance, `analyze_run`, regression checks, and a parity report. An external reference is design evidence by default and becomes an `authorized-reference` oracle only when authorization is recorded explicitly.
 
 Common mixed case: adding streaming to an endpoint that already returns a non-streaming response. `assemble(stream(input)) == old_response(input)` is an executable oracle for the assembled result, while chunk ordering, flush cadence, mid-stream errors, and cancellation are introduced properties verified by contract tests.
 
@@ -283,9 +283,9 @@ After the user approves, write `approved_by` and `approved_at` into the contract
 
 After approval, load only the implementation context selected by the route:
 
-- **`contract-only`** — do **not** load `differential-migration`. Implement the approved pilot directly from the contract and plan, then run its contract, characterization, and regression checks.
-- **`mixed`** — load `differential-migration` for properties using `executable-baseline` or `authorized-reference`; run the declared non-executable checks for the rest.
-- **`differential`** — load `differential-migration` and compare every desired-evolution property with its executable baseline or authorized reference.
+- **`contract-only`** — do **not** load `differential-migration`. Implement the approved pilot directly from the contract and plan, then run the declared contract, characterization, and regression checks for every property in the in-scope verification set.
+- **`mixed`** — load `differential-migration` for every property in the set using `executable-baseline` or `authorized-reference`, including preservation properties; run the declared non-executable checks for the rest.
+- **`differential`** — load `differential-migration` and compare every property in the set with its executable baseline or authorized reference.
 
 For every route:
 
@@ -295,7 +295,7 @@ For every route:
 4. Use official SDKs where one exists; do not hand-roll an API protocol to save time.
 5. Run focused checks after each change and the full discovered CI-equivalent suite before handoff.
 6. Classify every mismatch; never weaken the contract or test to obtain a pass.
-7. Produce a schema-valid `parity-report.json` with one result for every in-scope property except an explicitly deferred `unknown`; append all command outcomes to evidence. Omit `old_output` when no executable comparison exists.
+7. Produce a schema-valid `parity-report.json` with exactly one result for every property in the in-scope verification set. Set `total_properties == len(results) == passed + mismatches`; explicitly deferred unknowns contribute to none of these values. Append all command outcomes to evidence and omit `old_output` when no executable comparison exists.
 8. Before handoff, the target's own formatter, linter, and test suite must all pass on the candidate. Discover them from the repo (e.g. `cargo fmt --check` + `cargo clippy -- -D warnings` + `cargo test`, `ruff`/`pytest`, `eslint`/`vitest`) and record each command with its exit code in evidence. Append one run-bound `final_verification` entry containing the successful command list. A formatting- or lint-only failure is a failed run, not a stylistic footnote — CI will reject it.
 
 If a project-local adopted-skill note requires extra executable checks, run them

@@ -36,6 +36,7 @@ JSON Schema files validate every artifact a skill produces:
 - `schemas/evidence.schema.json` — evidence.jsonl entry format
 - `schemas/repro.schema.json` — Phase 0 reproducible environment pin
 - `schemas/provenance.schema.json` — provenance & licensing (SPDX, SLSA)
+- `schemas/repo-inventory.schema.json` — scoped target surfaces, dependencies, evidence references, and exclusions
 
 ## Policies
 
