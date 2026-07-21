@@ -79,6 +79,28 @@ non-zero on any schema drift.
 
 ## Installation
 
+### One-line install
+
+Run inside the target repository. Detects an existing `.claude/`, `.codex/`,
+`.kiro/`, or `.opencode/` directory and installs there (falls back to
+`.agents/skills/`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash
+```
+
+Force a specific host:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash -s -- --host opencode
+```
+
+The script caches a shallow clone at `~/.cache/mew-skills` (override with
+`MEW_SKILLS_CACHE`) and re-pulls it on subsequent runs. It forwards any flags
+to `scripts/install-agent-skills.py`, so `--copy` and `--uninstall` work too.
+
+### Manual clone
+
 ```bash
 # Clone
 git clone https://github.com/tripplen23/mew-skills.git
