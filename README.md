@@ -12,6 +12,10 @@ differential verification from the approved behavior and available oracle.
 Phase skills handle repository mapping, observable-behavior capture, planning,
 and specialized verification on demand.
 
+See `docs/HOW-IT-WORKS.md` for a visual walkthrough (flowcharts + sequence
+diagrams) of the run lifecycle, verification-route decision, approval gate,
+and observation's channel model — same rules as below, easier to scan.
+
 ## Skills
 
 | Skill                    | Phase              | What it does                                                                                                                                                                                                                                           |
