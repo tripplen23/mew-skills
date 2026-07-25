@@ -1,0 +1,13 @@
+# Pylint config for mew-skills scripts.
+# Only fail on real errors (E) and fatal (F). Style/refactor warnings are
+# non-blocking — fix opportunistically, do not gate PRs on them.
+
+[MESSAGES CONTROL]
+disable=
+    C,
+    R,
+    W,
+    import-error
+
+[REPORTS]
+score=no
