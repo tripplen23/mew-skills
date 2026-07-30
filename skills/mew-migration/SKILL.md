@@ -96,6 +96,13 @@ Choose the smallest mode that fits the request:
 
 Do not force three pilot units onto a bounded feature adoption. Scale inventory, evidence, and testing to the observable surfaces affected by the request.
 
+**Framework migration defaults.** When `scope_mode` is `framework_migration`:
+- The public contract source (OpenAPI, GraphQL, protobuf, or route definitions) is primary structural evidence, not just source code.
+- Preserve observed HTTP status codes, response bodies, and error messages as exact-match properties.
+- Use `scripts/differential_http.py` for cross-process comparison — replay identical requests against baseline and candidate servers.
+- Verify against the contract spec first, then run differential comparison for implemented endpoints.
+- Record framework-specific migration patterns (e.g., Flask global state → Axum `Arc<Mutex<>>`) in evidence.
+
 ## Verification route: oracle presence
 
 Classify each contract property by its structured `oracle.kind` before loading an implementation skill:

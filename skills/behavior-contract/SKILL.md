@@ -78,6 +78,22 @@ For each existing or requested behavior, create a contract property entry with a
 
 Allowed oracle kinds are `executable-baseline`, `authorized-reference`, `characterization`, `regression`, `contract-spec`, and `unresolved`. `authorized-reference` requires explicit authorization evidence; `unresolved` is valid only while the property remains `unknown`.
 
+**HTTP oracle pattern.** When the target is an HTTP service, capture requests and responses as replay artifacts. For each endpoint, record:
+- The exact request (method, path, headers, body)
+- The expected status code
+- The expected body or body shape (use `"int"`, `"str"`, `"bool"` for shape-only assertions on dynamic fields like `id`)
+
+Write captured requests to a `replay.jsonl` file and reference it in the oracle:
+
+```yaml
+oracle:
+  kind: executable-baseline
+  command: "python3 scripts/differential_http.py --baseline <cmd> --baseline-dir <dir> --candidate <cmd> --candidate-dir <dir> --replay replay.jsonl"
+  replay_file: replay.jsonl
+```
+
+The `differential_http.py` script (in mew-skills) will start both servers, replay requests, and produce a parity report. Hermes can manage the server lifecycle with `terminal(background=true)` and `process` tools, or delegate to the script for one-shot comparison.
+
 ### Step 4: Label each property
 
 Assign one of five labels:
