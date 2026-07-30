@@ -64,31 +64,24 @@ python skills/differential-migration/scripts/diff_test.py \
 
 ### HTTP differential mode
 
-When the contract has HTTP service properties, use `scripts/differential_http.py` for
-cross-process comparison. Hermes agents use `terminal(background=true)` to manage
-server lifecycles.
+When the contract has HTTP service properties, use `scripts/differential_http.py` for cross-process comparison.
 
-**Workflow for Hermes agents:**
+**One-shot mode (portable default):**
 
-1. Start baseline server:
-   ```
-   terminal(background=true, workdir=<baseline-dir>, command="PORT=9001 python3.11 app.py")
-   ```
-2. Wait for readiness: poll with `process(poll)` until the server responds.
-3. Start candidate server on a different port:
-   ```
-   terminal(background=true, workdir=<candidate-dir>, command="PORT=9002 cargo run")
-   ```
-4. Run the comparison:
-   ```
-   terminal(command="python3 scripts/differential_http.py --baseline ... --candidate ... --replay replay.jsonl")
-   ```
-5. Stop both servers: `process(kill)` for each session ID.
+```bash
+python3 scripts/differential_http.py \
+  --run-id <run-id> \
+  --baseline "python3 app.py" \
+  --baseline-dir <baseline-dir> \
+  --candidate "cargo run" \
+  --candidate-dir <candidate-dir> \
+  --replay replay.jsonl \
+  --output parity-report.json
+```
 
-**Or use the one-shot script** which manages server lifecycle internally:
-   ```
-   terminal(command="python3 scripts/differential_http.py --baseline 'PORT=9001 python3.11 app.py' --baseline-dir tests/fixtures/... --candidate 'PORT=9002 cargo run' --candidate-dir mew-core/crates/... --replay replay.jsonl")
-   ```
+The runner allocates ports, exports `PORT` to each server command, waits for `--ready-path` (default `/health`), replays requests, writes a `parity-report.schema.json`-shaped report, and stops both servers.
+
+**Managed-lifecycle mode:** If the host agent supports background processes, it may start baseline and candidate servers itself, poll readiness, run replay, and stop both sessions. Record each session ID, command, exit code, and cleanup action in `evidence.jsonl`.
 
 Use only normalization and tolerances approved in the contract. Compare:
 

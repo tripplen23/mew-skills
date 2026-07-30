@@ -1,0 +1,2 @@
+{"property_id":"P001","method":"GET","path":"/health","expected_status":200,"expected_body":{"status":"ok"}}
+{"property_id":"P002","method":"GET","path":"/item","expected_status":200,"expected_body_shape":{"id":"int","name":"str"}}

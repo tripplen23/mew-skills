@@ -92,7 +92,7 @@ oracle:
   replay_file: replay.jsonl
 ```
 
-The `differential_http.py` script (in mew-skills) will start both servers, replay requests, and produce a parity report. Hermes can manage the server lifecycle with `terminal(background=true)` and `process` tools, or delegate to the script for one-shot comparison.
+The `differential_http.py` script (in mew-skills) starts both servers, replays requests, and produces a `parity-report.schema.json`-shaped report. Agents with background process tools may manage the server lifecycle themselves; otherwise use the script's one-shot mode.
 
 ### Step 4: Label each property
 
