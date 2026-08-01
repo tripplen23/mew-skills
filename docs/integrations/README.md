@@ -63,5 +63,6 @@ python3 .../install-agent-skills.py --global --update
 
 `--update` scans each known host's global directory and reinstalls wherever a
 mew-skills skill is present, so new skills propagate without re-running the
-full install per host. `--copy` installs are not auto-updated by symlinks; pass
-`update --copy` to refresh them.
+full install per host. Each install's mode is preserved: symlinked installs
+re-link, copied installs re-copy, so `--copy` installs are refreshed too. Add
+`--copy` to additionally convert a symlinked install into a copied one.
