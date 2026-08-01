@@ -183,6 +183,20 @@ def main() -> int:
                     help="free-text investigation note for mismatches (default: uses the mismatch note)")
     args = ap.parse_args()
 
+    # Validate report options BEFORE replaying any (possibly mutating)
+    # sequence cases, so a malformed command fails fast with no side effects.
+    if args.output and not args.run_id:
+        ap.error("--run-id is required when --output is used")
+    if args.run_id and not re.fullmatch(r"\d{8}-\d{6}-[0-9a-f]{7}", args.run_id):
+        ap.error("--run-id must match YYYYMMDD-HHMMSS-<7char hash>")
+    allowed_class = [
+        "regression", "tolerance_miss", "nondeterminism", "intentional_change",
+        "deprecation", "performance_regression", "provenance_break",
+        "reproducibility_break", "normalization_gap", "contract_gap",
+    ]
+    if args.classification not in allowed_class:
+        ap.error(f"--classification must be one of {allowed_class}")
+
     with open(args.sequence) as f:
         seq = json.load(f)
 
@@ -224,17 +238,6 @@ def main() -> int:
     total = len(cases)
     print(f"\n{total - fails}/{total} properties matched")
     if args.output:
-        if not args.run_id:
-            ap.error("--run-id is required when --output is used")
-        if not re.fullmatch(r"\d{8}-\d{6}-[0-9a-f]{7}", args.run_id):
-            ap.error("--run-id must match YYYYMMDD-HHMMSS-<7char hash>")
-        allowed_class = [
-            "regression", "tolerance_miss", "nondeterminism", "intentional_change",
-            "deprecation", "performance_regression", "provenance_break",
-            "reproducibility_break", "normalization_gap", "contract_gap",
-        ]
-        if args.classification not in allowed_class:
-            ap.error(f"--classification must be one of {allowed_class}")
         with open(args.output, "w") as f:
             json.dump(
                 {
