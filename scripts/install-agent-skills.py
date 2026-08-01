@@ -31,6 +31,13 @@ HOST_SKILLS_DIR = {
     "agent-skills": Path(".agents/skills"),
 }
 
+# Host command-directory layout: (project-relative, global home-relative).
+# Slash-menu commands only make sense where the host ships one; today only
+# opencode does. Other hosts install skills only.
+HOST_COMMANDS_DIR = {
+    "opencode": (Path(".opencode/commands"), Path(".config/opencode/commands")),
+}
+
 GLOBAL_ANCHOR = Path.home() / ".agents" / "mew-skills"
 
 
@@ -71,6 +78,23 @@ def skill_names(pack: Path) -> list[str]:
     return names
 
 
+def command_names(pack: Path) -> list[str]:
+    commands_source = pack / "commands"
+    if not commands_source.is_dir():
+        return []
+    return sorted(p.name for p in commands_source.iterdir() if p.suffix == ".md")
+
+
+def resolve_commands_dir(target: Path, host: str, global_install: bool) -> Path | None:
+    """Return the host command directory, or None when the host has none."""
+    layout = HOST_COMMANDS_DIR.get(host)
+    if layout is None:
+        return None
+    rel = layout[1] if global_install else layout[0]
+    base = Path.home() if global_install else target
+    return (base / rel).resolve()
+
+
 def link_or_copy(source: Path, destination: Path, copy: bool) -> None:
     remove_path(destination)
     if copy:
@@ -97,7 +121,7 @@ def resolve_install_paths(
     return target / skills_dir, target / ".agents" / "mew-skills", git_dir
 
 
-def install(pack: Path, target: Path, skills_dir: Path, copy: bool, global_install: bool) -> None:
+def install(pack: Path, target: Path, skills_dir: Path, copy: bool, global_install: bool, host: str) -> None:
     skills_root, anchor, git_dir = resolve_install_paths(target, skills_dir, global_install)
     skills_root.mkdir(parents=True, exist_ok=True)
 
@@ -105,6 +129,15 @@ def install(pack: Path, target: Path, skills_dir: Path, copy: bool, global_insta
     for name in skill_names(pack):
         link_or_copy(pack / "skills" / name, skills_root / name, copy)
         installed.append(str(skills_dir / name))
+
+    commands_dir = resolve_commands_dir(target, host, global_install)
+    if commands_dir is not None:
+        commands_dir.mkdir(parents=True, exist_ok=True)
+        for name in command_names(pack):
+            shutil.copy2(pack / "commands" / name, commands_dir / name)
+        if not global_install:
+            rel = commands_dir.relative_to(target.resolve())
+            installed.append(str(rel))
 
     remove_path(anchor)
     anchor.parent.mkdir(parents=True, exist_ok=True)
@@ -127,12 +160,18 @@ def install(pack: Path, target: Path, skills_dir: Path, copy: bool, global_insta
     print(f"mew-skills {mode} {scope}")
     print(f"Skills directory: {skills_root}")
     print(f"Installed {len(skill_names(pack))} skills: {', '.join(skill_names(pack))}")
+    if commands_dir is not None:
+        print(f"Commands directory: {commands_dir}")
 
 
-def uninstall(pack: Path, target: Path, skills_dir: Path, global_install: bool) -> None:
+def uninstall(pack: Path, target: Path, skills_dir: Path, global_install: bool, host: str) -> None:
     skills_root, anchor, git_dir = resolve_install_paths(target, skills_dir, global_install)
     for name in skill_names(pack):
         remove_path(skills_root / name)
+    commands_dir = resolve_commands_dir(target, host, global_install)
+    if commands_dir is not None:
+        for name in command_names(pack):
+            remove_path(commands_dir / name)
     if global_install:
         # The anchor is shared by every global install. Only remove it once
         # no other host's global skill directory still has mew-skills.
@@ -177,7 +216,7 @@ def global_update(pack: Path, force_copy: bool) -> None:
         mode = install_mode(root, names, force_copy)
         if mode is None:
             continue
-        install(pack, Path.home(), rel, mode, global_install=True)
+        install(pack, Path.home(), rel, mode, global_install=True, host=host)
         updated.append(host)
     if not updated:
         print("No global mew-skills installation found. Install first with --global.")
@@ -240,9 +279,9 @@ def main() -> int:
         target = args.target or Path.home()
         try:
             if args.uninstall:
-                uninstall(pack, target, skills_dir, True)
+                uninstall(pack, target, skills_dir, True, args.host)
             else:
-                install(pack, target, skills_dir, args.copy, True)
+                install(pack, target, skills_dir, args.copy, True, args.host)
         except (OSError, RuntimeError) as exc:
             parser.error(str(exc))
         return 0
@@ -257,9 +296,9 @@ def main() -> int:
 
     try:
         if args.uninstall:
-            uninstall(pack, target, skills_dir, False)
+            uninstall(pack, target, skills_dir, False, args.host)
         else:
-            install(pack, target, skills_dir, args.copy, False)
+            install(pack, target, skills_dir, args.copy, False, args.host)
     except (OSError, RuntimeError) as exc:
         parser.error(str(exc))
     return 0

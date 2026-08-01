@@ -113,9 +113,11 @@ curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.
 ```
 
 The default global install targets `~/.agents/skills/` (shared by OpenCode,
-Codex, and agent-skills). Install for a different host's global directory
-instead (Claude Code `~/.claude/skills/`, Kiro `~/.kiro/skills/`, Hermes
-`~/.hermes/skills/`):
+Codex, and agent-skills). It also registers the six skills as OpenCode slash
+commands under `~/.config/opencode/commands/`, so `/mew-migration` and friends
+are available from the OpenCode `/` menu immediately. Install for a different
+host's global directory instead (Claude Code `~/.claude/skills/`, Kiro
+`~/.kiro/skills/`, Hermes `~/.hermes/skills/`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash -s -- --global --host claude
