@@ -150,24 +150,34 @@ def uninstall(pack: Path, target: Path, skills_dir: Path, global_install: bool) 
     print(f"Removed mew-skills {where}")
 
 
-def global_update(pack: Path, copy: bool) -> None:
+def install_mode(root: Path, names: list[str], force_copy: bool) -> bool | None:
+    """Detect an existing install's mode, or None if absent.
+
+    Symlinked skills re-link on update; copied skills re-copy. force_copy
+    converts a symlinked install into a copied one.
+    """
+    for name in names:
+        path = root / name
+        if path.is_symlink():
+            return True if force_copy else False
+        if path.exists():
+            return True
+    return None
+
+
+def global_update(pack: Path, force_copy: bool) -> None:
     seen: set[Path] = set()
     updated: list[str] = []
+    names = skill_names(pack)
     for host, rel in HOST_SKILLS_DIR.items():
         root = (Path.home() / rel).resolve()
         if root in seen:
             continue
         seen.add(root)
-        # A symlinked install is present even when the link target is broken;
-        # a copied install only counts when --copy is requested, so plain
-        # `update` never silently converts --copy installs into symlinks.
-        present = any(
-            (root / name).is_symlink() or (copy and (root / name).exists())
-            for name in skill_names(pack)
-        )
-        if not present:
+        mode = install_mode(root, names, force_copy)
+        if mode is None:
             continue
-        install(pack, Path.home(), rel, copy, global_install=True)
+        install(pack, Path.home(), rel, mode, global_install=True)
         updated.append(host)
     if not updated:
         print("No global mew-skills installation found. Install first with --global.")
@@ -193,7 +203,11 @@ def main() -> int:
         type=Path,
         help="Override skills directory (project: relative to worktree, global: relative to home)",
     )
-    parser.add_argument("--copy", action="store_true", help="Copy instead of creating symlinks")
+    parser.add_argument(
+        "--copy",
+        action="store_true",
+        help="Copy instead of creating symlinks (with --update: convert symlinked installs to copies)",
+    )
     parser.add_argument(
         "--global",
         dest="global_install",
@@ -203,7 +217,7 @@ def main() -> int:
     parser.add_argument(
         "--update",
         action="store_true",
-        help="Refresh all installed global skill directories from the pack (requires --global)",
+        help="Refresh all installed global skill directories from the pack, preserving each install's mode (requires --global)",
     )
     parser.add_argument("--uninstall", action="store_true", help="Remove installed skills")
     args = parser.parse_args()

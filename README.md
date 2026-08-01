@@ -132,9 +132,10 @@ curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.
 ```
 
 `update` re-runs the installer against each already-installed global skill
-directory, refreshing existing symlinks and linking any newly added skills.
-`--copy` installs do not auto-update; re-run with `update --copy` to refresh
-them.
+directory, refreshing existing skills and linking any newly added ones. It
+detects each install's mode: symlinked installs re-link, copied installs
+re-copy — so `--copy` installs are kept up to date too. Pass `update --copy`
+to additionally convert a symlinked install into a copied one.
 
 ### Manual clone
 
