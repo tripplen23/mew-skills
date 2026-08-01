@@ -12,8 +12,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Lock
 
 ITEMS = [
-    {"id": 2, "name": "Bravo", "ts": "2026-08-01T10:00:00.123456"},
-    {"id": 1, "name": "Alpha", "ts": "2026-08-01T10:00:00.123455"},
+    {"ts": "2026-08-01T10:05:00.654321", "name": "Bravo", "id": 2},
+    {"ts": "2026-08-01T10:05:00.654320", "name": "Alpha", "id": 1},
 ]
 LOCK = Lock()
 

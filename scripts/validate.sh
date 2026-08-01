@@ -58,13 +58,15 @@ fi
 
 echo ""
 echo "=== Regression fixtures (mew#106) ==="
-if bash scripts/run_fixtures.sh >/tmp/fixtures-all.log 2>&1; then
+fixture_log=$(mktemp) || { echo "  FAIL: cannot create temp log"; FAIL=1; }
+if bash scripts/run_fixtures.sh >"$fixture_log" 2>&1; then
   echo "  PASS: all regression fixtures"
 else
   echo "  FAIL: one or more regression fixtures"
-  tail -6 /tmp/fixtures-all.log | sed 's/^/    /'
+  tail -6 "$fixture_log" | sed 's/^/    /'
   FAIL=1
 fi
+rm -f "$fixture_log"
 
 echo ""
 echo "=== Cross-artifact analyzer self-check ==="

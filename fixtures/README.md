@@ -37,13 +37,17 @@ Each fixture is a directory under `fixtures/<id>/` containing:
 
 ## Runner
 
-```
+```sh
 bash scripts/run_fixtures.sh [fixture-id ...]
 ```
 
 - Discovers every `fixtures/*/fixture.json`.
+- Validates metadata (parse success, `oracle_tier: hard`, provenance
+  `fails_before`/`passes_after`, non-empty `gate_command`, executable
+  `gate.sh`) before executing.
 - Executes each `gate_command` with cwd = fixture dir.
-- Prints `PASS <id>` / `FAIL <id>`; exits 1 if any fixture fails.
+- Prints `PASS: <id>` / `FAIL: <id>`; exits 1 if any fixture fails or any
+  metadata is invalid.
 - Wired into `scripts/validate.sh` so a broken fixture blocks the pack.
 
 ## Pruning rules
