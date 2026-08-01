@@ -8,7 +8,8 @@
 #   curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash
 #   curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash -s -- --host claude
 #
-# Global install (user-level skill dirs shared by OpenCode, Codex, Claude, Kiro):
+# Global install (user-level skill dirs shared by OpenCode, Codex, agent-skills;
+# use --host for Claude, Kiro, Hermes):
 #   curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash -s -- --global
 #
 # Auto-update every global install from the latest main:

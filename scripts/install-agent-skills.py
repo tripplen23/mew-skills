@@ -27,6 +27,7 @@ HOST_SKILLS_DIR = {
     "claude": Path(".claude/skills"),
     "codex": Path(".agents/skills"),
     "kiro": Path(".kiro/skills"),
+    "hermes": Path(".hermes/skills"),
     "agent-skills": Path(".agents/skills"),
 }
 
@@ -84,7 +85,12 @@ def resolve_install_paths(
 ) -> tuple[Path, Path, Path | None]:
     """Return (skills_root, anchor, git_dir) for project or global installs."""
     if global_install:
-        return Path.home() / skills_dir, GLOBAL_ANCHOR, None
+        skills_root = (Path.home() / skills_dir).resolve()
+        if not skills_root.is_relative_to(Path.home()):
+            raise RuntimeError(
+                f"--skills-dir must stay inside $HOME for global installs: {skills_dir}"
+            )
+        return skills_root, GLOBAL_ANCHOR, None
     git_dir = target / ".git"
     if not git_dir.exists():
         raise RuntimeError(f"target is not a git worktree: {target}")
@@ -127,8 +133,18 @@ def uninstall(pack: Path, target: Path, skills_dir: Path, global_install: bool) 
     skills_root, anchor, git_dir = resolve_install_paths(target, skills_dir, global_install)
     for name in skill_names(pack):
         remove_path(skills_root / name)
-    remove_path(anchor)
-    if not global_install:
+    if global_install:
+        # The anchor is shared by every global install. Only remove it once
+        # no other host's global skill directory still has mew-skills.
+        others = [
+            (Path.home() / rel).resolve()
+            for rel in set(HOST_SKILLS_DIR.values())
+            if (Path.home() / rel).resolve() != skills_root
+        ]
+        if not any((root / name).exists() for root in others for name in skill_names(pack)):
+            remove_path(anchor)
+    else:
+        remove_path(anchor)
         replace_exclude_block(git_dir / "info" / "exclude", [])
     where = "global installation" if global_install else f"installation from {target}"
     print(f"Removed mew-skills {where}")
@@ -142,7 +158,13 @@ def global_update(pack: Path, copy: bool) -> None:
         if root in seen:
             continue
         seen.add(root)
-        present = any((root / name).exists() for name in skill_names(pack))
+        # A symlinked install is present even when the link target is broken;
+        # a copied install only counts when --copy is requested, so plain
+        # `update` never silently converts --copy installs into symlinks.
+        present = any(
+            (root / name).is_symlink() or (copy and (root / name).exists())
+            for name in skill_names(pack)
+        )
         if not present:
             continue
         install(pack, Path.home(), rel, copy, global_install=True)
@@ -202,10 +224,13 @@ def main() -> int:
     if args.global_install:
         skills_dir = args.skills_dir or HOST_SKILLS_DIR[args.host]
         target = args.target or Path.home()
-        if args.uninstall:
-            uninstall(pack, target, skills_dir, True)
-        else:
-            install(pack, target, skills_dir, args.copy, True)
+        try:
+            if args.uninstall:
+                uninstall(pack, target, skills_dir, True)
+            else:
+                install(pack, target, skills_dir, args.copy, True)
+        except (OSError, RuntimeError) as exc:
+            parser.error(str(exc))
         return 0
 
     if args.target is None:

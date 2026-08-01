@@ -106,13 +106,16 @@ to `scripts/install-agent-skills.py`, so `--copy` and `--uninstall` work too.
 ### Global install (multiple agents, one copy)
 
 Install once into the user-level skill directories shared by OpenCode, Codex,
-Claude Code, and Kiro. No target repository needed:
+and other Agent-Skills-compatible agents. No target repository needed:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash -s -- --global
 ```
 
-Install for a specific host's global directory instead of all shared ones:
+The default global install targets `~/.agents/skills/` (shared by OpenCode,
+Codex, and agent-skills). Install for a different host's global directory
+instead (Claude Code `~/.claude/skills/`, Kiro `~/.kiro/skills/`, Hermes
+`~/.hermes/skills/`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash -s -- --global --host claude
@@ -122,7 +125,7 @@ curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.
 
 Skills are symlinked to the cached clone by default. Re-pulling the cache
 updates every installed copy automatically — a single command refreshes all
-global installs (OpenCode, Codex, Claude Code, Kiro) at once:
+global installs (OpenCode, Codex, Claude Code, Kiro, Hermes) at once:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash -s -- update

@@ -31,14 +31,18 @@ host (relative to `$HOME`) instead of a target repository. No git worktree is
 required. OpenCode, Codex, and Agent-Skills-compatible hosts share
 `~/.agents/skills/`, so one install covers several agents:
 
-| Host                | Global path         | Command                                                            |
-| ------------------- | ------------------- | ------------------------------------------------------------------ |
-| OpenCode            | `~/.agents/skills/` | `python3 .../install-agent-skills.py --global --host opencode`     |
-| Claude Code         | `~/.claude/skills/` | `python3 .../install-agent-skills.py --global --host claude`       |
+| Host                | Global path          | Command                                                            |
+| ------------------- | -------------------- | ------------------------------------------------------------------ |
+| OpenCode            | `~/.agents/skills/`  | `python3 .../install-agent-skills.py --global --host opencode`     |
+| Claude Code         | `~/.claude/skills/`  | `python3 .../install-agent-skills.py --global --host claude`       |
 | Codex / agent-skills | `~/.agents/skills/` | `python3 .../install-agent-skills.py --global --host codex`        |
-| Kiro (IDE + CLI)    | `~/.kiro/skills/`   | `python3 .../install-agent-skills.py --global --host kiro --copy`  |
+| Kiro (IDE + CLI)    | `~/.kiro/skills/`    | `python3 .../install-agent-skills.py --global --host kiro --copy`  |
+| Hermes              | `~/.hermes/skills/`  | `python3 .../install-agent-skills.py --global --host hermes`      |
 
-The global anchor lives at `~/.agents/mew-skills`.
+The global anchor lives at `~/.agents/mew-skills`. The default `--global`
+install (no `--host`) targets `~/.agents/skills/`, which OpenCode, Codex, and
+Agent-Skills-compatible hosts share; use `--host` to pick a different host's
+global directory.
 
 ## Auto-update
 
