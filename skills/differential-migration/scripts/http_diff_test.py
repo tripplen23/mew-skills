@@ -11,8 +11,10 @@ Usage:
       --sequence cases.json \
       --baseline http://127.0.0.1:5000 \
       --candidate http://127.0.0.1:8080 \
-      [--normalize timestamps] \
       [--output parity-report.json]
+
+Normalization is configured per property inside the sequence file (there is
+no global --normalize flag):
 
 Sequence file format (cases.json):
 {
@@ -28,10 +30,16 @@ Sequence file format (cases.json):
   ]
 }
 
-Built-in normalizers:
-  timestamps  - replace ISO-8601 UTC microsecond timestamps with <TS>
-  json_order  - parse both bodies as JSON and compare as dicts
-  status_only - compare status code only (e.g. framework-generated docs)
+Per-property fields:
+  status_only - bool: compare status code only, ignore body entirely
+                (e.g. framework-generated openapi.json documents)
+  normalize   - list of body normalizers:
+                  timestamps - replace ISO-8601 UTC microsecond timestamps
+                               with <TS> on both sides
+                  json_order - parse both bodies as JSON and compare as
+                               dicts (key order ignored)
+                When both apply they compose: timestamps first, then
+                json_order.
 
 Exit code 0 = all properties matched, 1 = any mismatch. Prints a per-
 property verdict table. Proven in two independent migration runs
@@ -62,6 +70,12 @@ def normalize_timestamps(obj):
 
 
 def call(base: str, method: str, path: str, body) -> tuple[int, bytes]:
+    """Perform one request; return (status, raw_body).
+
+    HTTPError (4xx/5xx) yields its status + body. Connection failures and
+    timeouts (URLError) are surfaced as (0, b"") so the harness can report
+    a mismatch instead of crashing when one server is down.
+    """
     url = f"{base}{path}"
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method)
@@ -72,6 +86,8 @@ def call(base: str, method: str, path: str, body) -> tuple[int, bytes]:
             return resp.status, resp.read()
     except urllib.error.HTTPError as e:
         return e.code, e.read()
+    except urllib.error.URLError:
+        return 0, b""
 
 
 def parse_body(raw: bytes):
@@ -85,6 +101,10 @@ def parse_body(raw: bytes):
 
 
 def compare(case: dict, bs: int, bb, cs: int, cb) -> tuple[bool, str]:
+    # A connection failure (status 0 from call()) is never a valid response;
+    # 0 == 0 must not compare equal when both servers are down.
+    if bs == 0 or cs == 0:
+        return False, f"connection failure (base={bs}, cand={cs})"
     if bs != cs:
         return False, f"status {bs} != {cs}"
     if case.get("status_only"):
@@ -133,7 +153,14 @@ def main() -> int:
         if not ok:
             fails += 1
         results.append(
-            {"property_id": pid, "status": "pass" if ok else "mismatch", "note": note}
+            {
+                "property_id": pid,
+                "status": "pass" if ok else "mismatch",
+                "old_output": {"status": bs, "body": bb},
+                "new_output": {"status": cs, "body": cb},
+                "normalized_equal": ok,
+                "note": note,
+            }
         )
         print(f"{'PASS' if ok else 'FAIL'} {pid} {method} {path}: {note}")
 

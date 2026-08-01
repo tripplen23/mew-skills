@@ -35,7 +35,12 @@ class Handler(BaseHTTPRequestHandler):
                 items = sorted(ITEMS, key=lambda i: i["name"])
             self._json(200, items)
         elif self.path.startswith("/items/"):
-            iid = int(self.path.split("/")[-1])
+            raw = self.path.split("/")[-1]
+            try:
+                iid = int(raw)
+            except ValueError:
+                self._json(404, {"error": f"item {raw} missing"})
+                return
             with LOCK:
                 found = next((i for i in ITEMS if i["id"] == iid), None)
             if found:
