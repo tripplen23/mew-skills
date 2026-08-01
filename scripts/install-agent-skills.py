@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Install mew-skills into a target repository for Agent Skills discovery."""
+"""Install or update mew-skills for Agent Skills discovery.
+
+Project-local installs write into a target git worktree. Global installs
+write into user-level skill directories that multiple agents share.
+
+Symlinks (the default) point into the pack directory, so re-pulling the
+pack automatically updates every installed copy; --update refreshes links
+and picks up newly added skills.
+"""
 
 from __future__ import annotations
 
@@ -19,8 +27,11 @@ HOST_SKILLS_DIR = {
     "claude": Path(".claude/skills"),
     "codex": Path(".agents/skills"),
     "kiro": Path(".kiro/skills"),
+    "hermes": Path(".hermes/skills"),
     "agent-skills": Path(".agents/skills"),
 }
+
+GLOBAL_ANCHOR = Path.home() / ".agents" / "mew-skills"
 
 
 def replace_exclude_block(exclude: Path, lines: list[str]) -> None:
@@ -69,20 +80,32 @@ def link_or_copy(source: Path, destination: Path, copy: bool) -> None:
         destination.symlink_to(relative, target_is_directory=True)
 
 
-def install(pack: Path, target: Path, skills_dir: Path, copy: bool) -> None:
+def resolve_install_paths(
+    target: Path, skills_dir: Path, global_install: bool
+) -> tuple[Path, Path, Path | None]:
+    """Return (skills_root, anchor, git_dir) for project or global installs."""
+    if global_install:
+        skills_root = (Path.home() / skills_dir).resolve()
+        if not skills_root.is_relative_to(Path.home()):
+            raise RuntimeError(
+                f"--skills-dir must stay inside $HOME for global installs: {skills_dir}"
+            )
+        return skills_root, GLOBAL_ANCHOR, None
     git_dir = target / ".git"
     if not git_dir.exists():
         raise RuntimeError(f"target is not a git worktree: {target}")
+    return target / skills_dir, target / ".agents" / "mew-skills", git_dir
 
-    absolute_skills_dir = target / skills_dir
-    absolute_skills_dir.mkdir(parents=True, exist_ok=True)
+
+def install(pack: Path, target: Path, skills_dir: Path, copy: bool, global_install: bool) -> None:
+    skills_root, anchor, git_dir = resolve_install_paths(target, skills_dir, global_install)
+    skills_root.mkdir(parents=True, exist_ok=True)
 
     installed: list[str] = []
     for name in skill_names(pack):
-        link_or_copy(pack / "skills" / name, absolute_skills_dir / name, copy)
+        link_or_copy(pack / "skills" / name, skills_root / name, copy)
         installed.append(str(skills_dir / name))
 
-    anchor = target / ".agents" / "mew-skills"
     remove_path(anchor)
     anchor.parent.mkdir(parents=True, exist_ok=True)
     if copy:
@@ -92,28 +115,73 @@ def install(pack: Path, target: Path, skills_dir: Path, copy: bool) -> None:
     else:
         relative = os.path.relpath(pack.resolve(), anchor.parent.resolve())
         anchor.symlink_to(relative, target_is_directory=True)
-    installed.append(".agents/mew-skills")
 
-    replace_exclude_block(git_dir / "info" / "exclude", installed)
+    if global_install:
+        installed.append(str(GLOBAL_ANCHOR))
+    else:
+        installed.append(".agents/mew-skills")
+        replace_exclude_block(git_dir / "info" / "exclude", installed)
+
     mode = "copied" if copy else "linked"
-    print(f"mew-skills {mode} into {target}")
-    print(f"Skills directory: {skills_dir}")
+    scope = "globally" if global_install else f"into {target}"
+    print(f"mew-skills {mode} {scope}")
+    print(f"Skills directory: {skills_root}")
     print(f"Installed {len(skill_names(pack))} skills: {', '.join(skill_names(pack))}")
 
 
-def uninstall(pack: Path, target: Path, skills_dir: Path) -> None:
+def uninstall(pack: Path, target: Path, skills_dir: Path, global_install: bool) -> None:
+    skills_root, anchor, git_dir = resolve_install_paths(target, skills_dir, global_install)
     for name in skill_names(pack):
-        remove_path(target / skills_dir / name)
-    remove_path(target / ".agents" / "mew-skills")
-    replace_exclude_block(target / ".git" / "info" / "exclude", [])
-    print(f"Removed mew-skills installation from {target}")
+        remove_path(skills_root / name)
+    if global_install:
+        # The anchor is shared by every global install. Only remove it once
+        # no other host's global skill directory still has mew-skills.
+        others = [
+            (Path.home() / rel).resolve()
+            for rel in set(HOST_SKILLS_DIR.values())
+            if (Path.home() / rel).resolve() != skills_root
+        ]
+        if not any((root / name).exists() for root in others for name in skill_names(pack)):
+            remove_path(anchor)
+    else:
+        remove_path(anchor)
+        replace_exclude_block(git_dir / "info" / "exclude", [])
+    where = "global installation" if global_install else f"installation from {target}"
+    print(f"Removed mew-skills {where}")
+
+
+def global_update(pack: Path, copy: bool) -> None:
+    seen: set[Path] = set()
+    updated: list[str] = []
+    for host, rel in HOST_SKILLS_DIR.items():
+        root = (Path.home() / rel).resolve()
+        if root in seen:
+            continue
+        seen.add(root)
+        # A symlinked install is present even when the link target is broken;
+        # a copied install only counts when --copy is requested, so plain
+        # `update` never silently converts --copy installs into symlinks.
+        present = any(
+            (root / name).is_symlink() or (copy and (root / name).exists())
+            for name in skill_names(pack)
+        )
+        if not present:
+            continue
+        install(pack, Path.home(), rel, copy, global_install=True)
+        updated.append(host)
+    if not updated:
+        print("No global mew-skills installation found. Install first with --global.")
+    else:
+        print(f"Updated global installs for: {', '.join(updated)}")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Install mew-skills into a target repo for Agent Skills discovery."
+        description="Install or update mew-skills for Agent Skills discovery."
     )
-    parser.add_argument("target", type=Path, help="Target git worktree")
+    parser.add_argument(
+        "target", nargs="?", type=Path, help="Target git worktree (project install)"
+    )
     parser.add_argument(
         "--host",
         choices=sorted(HOST_SKILLS_DIR),
@@ -123,16 +191,51 @@ def main() -> int:
     parser.add_argument(
         "--skills-dir",
         type=Path,
-        help="Override skills directory relative to the target worktree",
+        help="Override skills directory (project: relative to worktree, global: relative to home)",
     )
     parser.add_argument("--copy", action="store_true", help="Copy instead of creating symlinks")
+    parser.add_argument(
+        "--global",
+        dest="global_install",
+        action="store_true",
+        help="Install into user-level skill directories instead of a target repo",
+    )
+    parser.add_argument(
+        "--update",
+        action="store_true",
+        help="Refresh all installed global skill directories from the pack (requires --global)",
+    )
     parser.add_argument("--uninstall", action="store_true", help="Remove installed skills")
     args = parser.parse_args()
 
     if args.copy and args.uninstall:
         parser.error("--copy and --uninstall cannot be used together")
+    if args.update and args.uninstall:
+        parser.error("--update and --uninstall cannot be used together")
 
     pack = Path(__file__).resolve().parents[1]
+
+    if args.update:
+        if not args.global_install:
+            parser.error("--update requires --global")
+        global_update(pack, args.copy)
+        return 0
+
+    if args.global_install:
+        skills_dir = args.skills_dir or HOST_SKILLS_DIR[args.host]
+        target = args.target or Path.home()
+        try:
+            if args.uninstall:
+                uninstall(pack, target, skills_dir, True)
+            else:
+                install(pack, target, skills_dir, args.copy, True)
+        except (OSError, RuntimeError) as exc:
+            parser.error(str(exc))
+        return 0
+
+    if args.target is None:
+        parser.error("target is required for project install (or use --global)")
+
     target = args.target.resolve()
     skills_dir = args.skills_dir or HOST_SKILLS_DIR[args.host]
     if skills_dir.is_absolute():
@@ -140,9 +243,9 @@ def main() -> int:
 
     try:
         if args.uninstall:
-            uninstall(pack, target, skills_dir)
+            uninstall(pack, target, skills_dir, False)
         else:
-            install(pack, target, skills_dir, args.copy)
+            install(pack, target, skills_dir, args.copy, False)
     except (OSError, RuntimeError) as exc:
         parser.error(str(exc))
     return 0

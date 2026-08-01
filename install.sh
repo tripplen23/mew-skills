@@ -8,8 +8,16 @@
 #   curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash
 #   curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash -s -- --host claude
 #
+# Global install (user-level skill dirs shared by OpenCode, Codex, agent-skills;
+# use --host for Claude, Kiro, Hermes):
+#   curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash -s -- --global
+#
+# Auto-update every global install from the latest main:
+#   curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash -s -- update
+#
 # Local clone:
 #   bash install.sh [flags forwarded to install-agent-skills.py]
+#   bash install.sh update
 #
 # ponytail: host auto-detection is a naive directory-presence heuristic
 # (first match wins); upgrade path is to let install-agent-skills.py itself
@@ -42,12 +50,18 @@ else
   pack="$CACHE_DIR"
 fi
 
+# `update` refreshes every global install from the cached pack (or local clone).
+if [ "${1:-}" = "update" ]; then
+  shift
+  exec python3 "$pack/scripts/install-agent-skills.py" --global --update "$@"
+fi
+
 target="$(pwd)"
 
 # Auto-detect host from the target repo, unless caller already passed --host.
 host_flag=()
 case " $* " in
-  *" --host "*|*" --skills-dir "*) ;;
+  *" --host "*|*" --skills-dir "*|*" --global ") ;;
   *)
     if [ -d "$target/.claude" ]; then host_flag=(--host claude)
     elif [ -d "$target/.codex" ]; then host_flag=(--host codex)
@@ -56,5 +70,10 @@ case " $* " in
     fi
     ;;
 esac
+
+# Global installs need no target repo; skip the trailing target arg.
+if [[ " $* " == *" --global "* ]]; then
+  exec python3 "$pack/scripts/install-agent-skills.py" "$@"
+fi
 
 exec python3 "$pack/scripts/install-agent-skills.py" "${host_flag[@]}" "$@" "$target"

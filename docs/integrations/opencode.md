@@ -2,6 +2,22 @@
 
 OpenCode only discovers project skills from `.opencode/skills/`, `.claude/skills/`, or `.agents/skills/` between the current directory and the git worktree root. A sibling `mew-skills/skills/` directory is not discovered automatically.
 
+## Install globally
+
+OpenCode also reads global skills from `~/.agents/skills/`. Install once for
+every project on the machine (shared with Codex and other
+Agent-Skills-compatible agents):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash -s -- --global
+```
+
+Re-run with `update` to pull the latest skills:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tripplen23/mew-skills/main/install.sh | bash -s -- update
+```
+
 ## Install locally
 
 Given:
