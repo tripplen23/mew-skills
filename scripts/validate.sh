@@ -57,6 +57,16 @@ else
 fi
 
 echo ""
+echo "=== Regression fixtures (mew#106) ==="
+if bash scripts/run_fixtures.sh >/tmp/fixtures-all.log 2>&1; then
+  echo "  PASS: all regression fixtures"
+else
+  echo "  FAIL: one or more regression fixtures"
+  tail -6 /tmp/fixtures-all.log | sed 's/^/    /'
+  FAIL=1
+fi
+
+echo ""
 echo "=== Cross-artifact analyzer self-check ==="
 if python3 scripts/analyze_run.py --selfcheck >/dev/null 2>&1; then
   echo "  PASS: analyze_run.py self-check"
