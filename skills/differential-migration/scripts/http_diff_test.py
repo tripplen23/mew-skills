@@ -11,7 +11,11 @@ Usage:
       --sequence cases.json \
       --baseline http://127.0.0.1:5000 \
       --candidate http://127.0.0.1:8080 \
-      [--output parity-report.json]
+      [--output parity-report.json --run-id 20260801-145954-217cab5]
+
+`--output` writes a parity-report.json conforming to
+schemas/parity-report.schema.json (requires `--run-id`, format
+YYYYMMDD-HHMMSS-<7char hash>, matching the run directory).
 
 Normalization is configured per property inside the sequence file (there is
 no global --normalize flag):
@@ -142,6 +146,11 @@ def main() -> int:
     ap.add_argument("--baseline", required=True, help="baseline base URL")
     ap.add_argument("--candidate", required=True, help="candidate base URL")
     ap.add_argument("--output", help="optional parity-report.json output")
+    ap.add_argument("--run-id", help="run id for the report (YYYYMMDD-HHMMSS-<7char hash>); required with --output")
+    ap.add_argument("--classification", default="regression",
+                    help="mismatch classification for the report (default: regression); one of the schema enum values")
+    ap.add_argument("--investigation", default="",
+                    help="free-text investigation note for mismatches (default: uses the mismatch note)")
     args = ap.parse_args()
 
     with open(args.sequence) as f:
@@ -177,14 +186,44 @@ def main() -> int:
     total = len(seq["properties"])
     print(f"\n{total - fails}/{total} properties matched")
     if args.output:
+        if not args.run_id:
+            ap.error("--run-id is required when --output is used")
+        if not re.fullmatch(r"\d{8}-\d{6}-[0-9a-f]{7}", args.run_id):
+            ap.error("--run-id must match YYYYMMDD-HHMMSS-<7char hash>")
+        allowed_class = [
+            "regression", "tolerance_miss", "nondeterminism", "intentional_change",
+            "deprecation", "performance_regression", "provenance_break",
+            "reproducibility_break", "normalization_gap", "contract_gap",
+        ]
+        if args.classification not in allowed_class:
+            ap.error(f"--classification must be one of {allowed_class}")
+        report_results = []
+        for res in results:
+            entry = {"property_id": res["property_id"], "status": res["status"]}
+            if res["status"] == "mismatch":
+                entry.update({
+                    "old_output": res["old_output"],
+                    "new_output": res["new_output"],
+                    "normalized_equal": False,
+                    "classification": args.classification,
+                    "investigation": args.investigation or res["note"],
+                })
+            else:
+                entry.update({
+                    "old_output": res["old_output"],
+                    "new_output": res["new_output"],
+                    "normalized_equal": True,
+                })
+            report_results.append(entry)
         with open(args.output, "w") as f:
             json.dump(
                 {
+                    "run_id": args.run_id,
                     "total_properties": total,
                     "passed": total - fails,
                     "mismatches": fails,
                     "verdict": "pass" if fails == 0 else "fail",
-                    "results": results,
+                    "results": report_results,
                 },
                 f,
                 indent=2,

@@ -72,8 +72,12 @@ python skills/differential-migration/scripts/http_diff_test.py \
   --sequence skills/differential-migration/fixtures/http-diff/cases.json \
   --baseline http://127.0.0.1:5000 \
   --candidate http://127.0.0.1:8080 \
-  --output parity-report.json
+  --output parity-report.json \
+  --run-id 20260801-145954-217cab5
 ```
+
+The `--output` report conforms to `schemas/parity-report.schema.json`
+(`run_id` required, format `YYYYMMDD-HHMMSS-<7char hash>`).
 
 The sequence file declares one entry per contract property (method, path,
 body, optional `status_only` boolean for framework-generated documents,
