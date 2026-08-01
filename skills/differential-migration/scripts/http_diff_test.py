@@ -57,7 +57,7 @@ import urllib.error
 import urllib.request
 
 TS_PATTERN = re.compile(
-    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})?"
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]00:00)?"
 )
 
 
@@ -65,8 +65,10 @@ def normalize_timestamps(obj):
     """Replace timestamps with <TS> anywhere they occur.
 
     Matches full-string timestamps AND timestamps embedded inside larger
-    strings (e.g. error details), and accepts an optional Z / +00:00 UTC
-    suffix so the normalizer is robust to aware-datetime baselines.
+    strings (e.g. error details). Only UTC suffixes (Z, +00:00, -00:00) are
+    normalized — a non-UTC offset (+05:30, -08:00) is left visible so a real
+    timezone mismatch between baseline and candidate still fails comparison
+    instead of being normalized into a false pass.
     """
     if isinstance(obj, dict):
         return {k: normalize_timestamps(v) for k, v in obj.items()}
