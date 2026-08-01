@@ -1,0 +1,136 @@
+{
+  "run_id": "20260801-145954-217cab5",
+  "total_properties": 4,
+  "passed": 2,
+  "mismatches": 2,
+  "verdict": "fail",
+  "results": [
+    {
+      "property_id": "P001",
+      "status": "pass",
+      "old_output": {
+        "status": 200,
+        "body": [
+          {
+            "id": 1,
+            "name": "Alpha",
+            "ts": "2026-08-01T10:00:00.123455"
+          },
+          {
+            "id": 2,
+            "name": "Bravo",
+            "ts": "2026-08-01T10:00:00.123456"
+          },
+          {
+            "id": 3,
+            "name": "Charlie",
+            "ts": "2026-08-01T17:14:22.318876"
+          },
+          {
+            "id": 4,
+            "name": "Charlie",
+            "ts": "2026-08-01T17:14:22.428574"
+          },
+          {
+            "id": 5,
+            "name": "Charlie",
+            "ts": "2026-08-01T17:14:26.946274"
+          }
+        ]
+      },
+      "new_output": {
+        "status": 200,
+        "body": [
+          {
+            "id": 1,
+            "name": "Alpha",
+            "ts": "2026-08-01T10:00:00.123455"
+          },
+          {
+            "id": 2,
+            "name": "Bravo",
+            "ts": "2026-08-01T10:00:00.123456"
+          },
+          {
+            "id": 3,
+            "name": "Charlie",
+            "ts": "2026-08-01T10:00:01.000000"
+          },
+          {
+            "id": 4,
+            "name": "Charlie",
+            "ts": "2026-08-01T10:00:01.000000"
+          },
+          {
+            "id": 5,
+            "name": "Charlie",
+            "ts": "2026-08-01T10:00:01.000000"
+          }
+        ]
+      },
+      "normalized_equal": true
+    },
+    {
+      "property_id": "P002",
+      "status": "pass",
+      "old_output": {
+        "status": 200,
+        "body": {
+          "id": 1,
+          "name": "Alpha",
+          "ts": "2026-08-01T10:00:00.123455"
+        }
+      },
+      "new_output": {
+        "status": 200,
+        "body": {
+          "id": 1,
+          "name": "Alpha",
+          "ts": "2026-08-01T10:00:00.123455"
+        }
+      },
+      "normalized_equal": true
+    },
+    {
+      "property_id": "P003",
+      "status": "mismatch",
+      "old_output": {
+        "status": 404,
+        "body": {
+          "type": "about:blank",
+          "title": "Not Found",
+          "detail": "Item with id 999 not found",
+          "status": 404
+        }
+      },
+      "new_output": {
+        "status": 404,
+        "body": {
+          "error": "item 999 missing"
+        }
+      },
+      "normalized_equal": false,
+      "classification": "regression",
+      "investigation": "body mismatch: base={\"detail\": \"Item with id 999 not found\", \"status\": 404, \"title\": \"Not Found\", \"type\": \"about:blank\"} cand={\"error\": \"item 999 missing\"}"
+    },
+    {
+      "property_id": "P004",
+      "status": "mismatch",
+      "old_output": {
+        "status": 204,
+        "body": ""
+      },
+      "new_output": {
+        "status": 201,
+        "body": {
+          "id": 6,
+          "name": "Charlie",
+          "ts": "2026-08-01T10:00:01.000000"
+        }
+      },
+      "normalized_equal": false,
+      "classification": "regression",
+      "investigation": "status 204 != 201"
+    }
+  ]
+}

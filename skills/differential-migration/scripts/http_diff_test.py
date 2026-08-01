@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+"""HTTP differential harness for API migrations.
+
+diff_test.py compares stdin/stdout of CLI commands. This harness does the
+same for HTTP APIs: replay an identical request sequence against the
+executable-baseline oracle and the candidate, then compare status + body
+after the contract's normalization rules.
+
+Usage:
+    python http_diff_test.py \
+      --sequence cases.json \
+      --baseline http://127.0.0.1:5000 \
+      --candidate http://127.0.0.1:8080 \
+      [--output parity-report.json --run-id 20260801-145954-217cab5]
+
+`--output` writes a parity-report.json conforming to
+schemas/parity-report.schema.json (requires `--run-id`, format
+YYYYMMDD-HHMMSS-<7char hash>, matching the run directory).
+
+Normalization is configured per property inside the sequence file (there is
+no global --normalize flag):
+
+Sequence file format (cases.json):
+{
+  "properties": [
+    {
+      "id": "P001",
+      "method": "GET",
+      "path": "/api/people",
+      "body": null,
+      "status_only": false,
+      "normalize": ["timestamps", "json_order"]
+    }
+  ]
+}
+
+Per-property fields:
+  status_only - bool: compare status code only, ignore body entirely
+                (e.g. framework-generated openapi.json documents)
+  ignore_headers - optional list of header names (lowercase) to exclude
+                from header parity for THIS property only (e.g.
+                ["content-type"] when a property declares media type
+                non-contractual)
+  normalize   - list of body normalizers:
+                  timestamps - replace ISO-8601 UTC microsecond timestamps
+                               with <TS> on both sides
+                  json_order - parse both bodies as JSON and compare as
+                               dicts (key order ignored)
+                When both apply they compose: timestamps first, then
+                json_order.
+
+Header parity: response headers are compared exactly by default (per
+behavior-contract's exact-header rule), excluding runtime artifacts
+(Date, Server, Content-Length, Connection, Keep-Alive,
+Transfer-Encoding). Use per-property `ignore_headers` to exempt
+property-specific headers such as Content-Type when the contract
+declares the media type non-contractual.
+
+Exit code 0 = all properties matched, 1 = any mismatch. Prints a per-
+property verdict table. Proven in two independent migration runs
+(Flask+Connexion -> FastAPI and Flask+Connexion -> Rust axum) where the
+pack's stdin/stdout diff_test.py could not verify HTTP endpoints.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+import urllib.error
+import urllib.request
+
+# Headers that vary per request for non-behavioral reasons and are never
+# contractual; stripped from header parity by default.
+RUNTIME_HEADERS = {
+    "date",
+    "server",
+    "content-length",
+    "connection",
+    "keep-alive",
+    "transfer-encoding",
+}
+
+TS_PATTERN = re.compile(
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]00:00)?"
+)
+
+
+def normalize_timestamps(obj):
+    """Replace timestamps with <TS> anywhere they occur.
+
+    Matches full-string timestamps AND timestamps embedded inside larger
+    strings (e.g. error details). Only UTC suffixes (Z, +00:00, -00:00) are
+    normalized — a non-UTC offset (+05:30, -08:00) is left visible so a real
+    timezone mismatch between baseline and candidate still fails comparison
+    instead of being normalized into a false pass.
+    """
+    if isinstance(obj, dict):
+        return {k: normalize_timestamps(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [normalize_timestamps(v) for v in obj]
+    if isinstance(obj, str):
+        return TS_PATTERN.sub("<TS>", obj)
+    return obj
+
+
+def call(base: str, method: str, path: str, body) -> tuple[int, bytes, dict]:
+    """Perform one request; return (status, raw_body, headers).
+
+    HTTPError (4xx/5xx) yields its status + body + headers. Connection
+    failures and timeouts (URLError) are surfaced as (0, b"", {}) so the
+    harness can report a mismatch instead of crashing when one server is
+    down.
+    """
+    url = f"{base}{path}"
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(url, data=data, method=method)
+    if body is not None:
+        req.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return resp.status, resp.read(), dict(resp.headers)
+    except urllib.error.HTTPError as e:
+        return e.code, e.read(), dict(e.headers)
+    except urllib.error.URLError:
+        return 0, b"", {}
+
+
+def parse_body(raw: bytes):
+    text = raw.decode(errors="replace")
+    if not text.strip():
+        return text
+    try:
+        return json.loads(text)
+    except Exception:
+        return text
+
+
+def compare(case: dict, bs: int, bb, bh: dict, cs: int, cb, ch: dict) -> tuple[bool, str]:
+    # A connection failure (status 0 from call()) is never a valid response;
+    # 0 == 0 must not compare equal when both servers are down.
+    if bs == 0 or cs == 0:
+        return False, f"connection failure (base={bs}, cand={cs})"
+    if bs != cs:
+        return False, f"status {bs} != {cs}"
+    if case.get("status_only"):
+        return True, "status OK (body not contractual)"
+    # Header parity: exact by default, minus runtime artifacts and any
+    # property-scoped ignore_headers.
+    ignore = set(h.lower() for h in case.get("ignore_headers", []))
+    hb = {k.lower(): v for k, v in bh.items() if k.lower() not in RUNTIME_HEADERS and k.lower() not in ignore}
+    hc = {k.lower(): v for k, v in ch.items() if k.lower() not in RUNTIME_HEADERS and k.lower() not in ignore}
+    if hb != hc:
+        return False, f"header mismatch: base={hb} cand={hc}"
+    nb, nc = bb, cb
+    if "timestamps" in case.get("normalize", []):
+        nb, nc = normalize_timestamps(nb), normalize_timestamps(nc)
+    if "json_order" in case.get("normalize", []):
+        try:
+            nb, nc = json.loads(json.dumps(nb, sort_keys=True)), json.loads(json.dumps(nc, sort_keys=True))
+        except Exception:
+            pass
+    if nb == nc:
+        return True, "body OK"
+    return (
+        False,
+        f"body mismatch: base={json.dumps(nb, sort_keys=True)[:160]} "
+        f"cand={json.dumps(nc, sort_keys=True)[:160]}",
+    )
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="HTTP differential harness for API migrations")
+    ap.add_argument("--sequence", required=True, help="cases.json sequence file")
+    ap.add_argument("--baseline", required=True, help="baseline base URL")
+    ap.add_argument("--candidate", required=True, help="candidate base URL")
+    ap.add_argument("--output", help="optional parity-report.json output")
+    ap.add_argument("--run-id", help="run id for the report (YYYYMMDD-HHMMSS-<7char hash>); required with --output")
+    ap.add_argument("--classification", default="regression",
+                    help="mismatch classification for the report (default: regression); one of the schema enum values")
+    ap.add_argument("--investigation", default="",
+                    help="free-text investigation note for mismatches (default: uses the mismatch note)")
+    args = ap.parse_args()
+
+    # Validate report options BEFORE replaying any (possibly mutating)
+    # sequence cases, so a malformed command fails fast with no side effects.
+    if args.output and not args.run_id:
+        ap.error("--run-id is required when --output is used")
+    if args.run_id and not re.fullmatch(r"\d{8}-\d{6}-[0-9a-f]{7}", args.run_id):
+        ap.error("--run-id must match YYYYMMDD-HHMMSS-<7char hash>")
+    allowed_class = [
+        "regression", "tolerance_miss", "nondeterminism", "intentional_change",
+        "deprecation", "performance_regression", "provenance_break",
+        "reproducibility_break", "normalization_gap", "contract_gap",
+    ]
+    if args.classification not in allowed_class:
+        ap.error(f"--classification must be one of {allowed_class}")
+
+    with open(args.sequence) as f:
+        seq = json.load(f)
+
+    cases = seq.get("properties")
+    if not isinstance(cases, list) or not cases:
+        ap.error("--sequence must define at least one property")
+
+    results = []
+    fails = 0
+    for case in cases:
+        pid, method, path, body = (
+            case["id"],
+            case["method"],
+            case["path"],
+            case.get("body"),
+        )
+        bs, raw_b, hb = call(args.baseline, method, path, body)
+        cs, raw_c, hc = call(args.candidate, method, path, body)
+        bb, cb = parse_body(raw_b), parse_body(raw_c)
+        ok, note = compare(case, bs, bb, hb, cs, cb, hc)
+        result = {
+            "property_id": pid,
+            "status": "pass" if ok else "mismatch",
+            "old_output": {"status": bs, "body": bb},
+            "new_output": {"status": cs, "body": cb},
+            "normalized_equal": ok,
+        }
+        if not ok:
+            fails += 1
+            result.update(
+                {
+                    "classification": args.classification,
+                    "investigation": args.investigation or note,
+                }
+            )
+        results.append(result)
+        print(f"{'PASS' if ok else 'FAIL'} {pid} {method} {path}: {note}")
+
+    total = len(cases)
+    print(f"\n{total - fails}/{total} properties matched")
+    if args.output:
+        with open(args.output, "w") as f:
+            json.dump(
+                {
+                    "run_id": args.run_id,
+                    "total_properties": total,
+                    "passed": total - fails,
+                    "mismatches": fails,
+                    "verdict": "pass" if fails == 0 else "fail",
+                    "results": results,
+                },
+                f,
+                indent=2,
+            )
+    return 1 if fails else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
