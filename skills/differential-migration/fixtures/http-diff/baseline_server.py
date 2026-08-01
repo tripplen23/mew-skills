@@ -7,17 +7,15 @@ people-api case that motivated Lesson 2: probe live behavior, the running
 server is the oracle, not the spec)."""
 
 import json
-import re
 from datetime import datetime, timezone
-
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Lock
 
 ITEMS = [
     {"id": 2, "name": "Bravo", "ts": "2026-08-01T10:00:00.123456"},
     {"id": 1, "name": "Alpha", "ts": "2026-08-01T10:00:00.123455"},
 ]
-LOCK = __import__("threading").Lock()
-TS_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}$")
+LOCK = Lock()
 
 
 class Handler(BaseHTTPRequestHandler):

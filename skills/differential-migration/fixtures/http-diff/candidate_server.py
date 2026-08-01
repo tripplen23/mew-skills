@@ -9,12 +9,13 @@ mismatches."""
 import json
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Lock
 
 ITEMS = [
     {"id": 2, "name": "Bravo", "ts": "2026-08-01T10:00:00.123456"},
     {"id": 1, "name": "Alpha", "ts": "2026-08-01T10:00:00.123455"},
 ]
-LOCK = __import__("threading").Lock()
+LOCK = Lock()
 
 
 class Handler(BaseHTTPRequestHandler):
