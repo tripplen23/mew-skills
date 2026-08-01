@@ -2,14 +2,48 @@
   "version": 1,
   "holdouts": [
     {
-      "id": "click-python-cli",
-      "repository": "https://github.com/pallets/click.git",
-      "revision": "333c28d79cd982990ee98eef61ec20ab1a4f38ba",
-      "license": "BSD-3-Clause",
-      "stack": "python-cli",
-      "status": "planned",
+      "id": "django-realworld",
+      "repository": "https://github.com/gothinkster/django-realworld-example-app.git",
+      "revision": "29c9d42831fa0cfc5a4aa7561f674396eacf20a2",
+      "license": "MIT",
+      "stack": "python-django",
+      "status": "baselined",
       "purpose": "Detect Mew/Rust-specific overfitting in universal migration rules.",
-      "task": "Add one bounded CLI behavior from an approved reference while preserving Click's existing public CLI contract.",
+      "task": "Add one bounded API behavior from an approved reference while preserving the existing Django REST public contract.",
+      "required_checks": [
+        "formatter",
+        "linter",
+        "test-suite",
+        "behavioral-contract",
+        "differential-verification"
+      ]
+    },
+    {
+      "id": "node-express-realworld",
+      "repository": "https://github.com/gothinkster/node-express-realworld-example-app.git",
+      "revision": "30b68e1e881462b2f4164ea09ab4c4f5699c7b0b",
+      "license": "MIT",
+      "stack": "node-express",
+      "status": "baselined",
+      "purpose": "Detect Mew/Rust-specific overfitting in universal migration rules.",
+      "task": "Add one bounded API behavior from an approved reference while preserving the existing Express public contract.",
+      "required_checks": [
+        "formatter",
+        "linter",
+        "test-suite",
+        "behavioral-contract",
+        "differential-verification"
+      ]
+    },
+    {
+      "id": "fzf-go-cli",
+      "repository": "https://github.com/junegunn/fzf.git",
+      "revision": "3337be9d450cd349e99273a2d3985ceaf5f3753f",
+      "license": "MIT",
+      "stack": "go-cli",
+      "status": "baselined",
+      "purpose": "Detect Mew/Rust-specific overfitting in universal migration rules.",
+      "task": "Add one bounded CLI behavior from an approved reference while preserving fzf's existing public CLI contract.",
       "required_checks": [
         "formatter",
         "linter",
