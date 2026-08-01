@@ -37,6 +37,10 @@ Sequence file format (cases.json):
 Per-property fields:
   status_only - bool: compare status code only, ignore body entirely
                 (e.g. framework-generated openapi.json documents)
+  ignore_headers - optional list of header names (lowercase) to exclude
+                from header parity for THIS property only (e.g.
+                ["content-type"] when a property declares media type
+                non-contractual)
   normalize   - list of body normalizers:
                   timestamps - replace ISO-8601 UTC microsecond timestamps
                                with <TS> on both sides
@@ -44,6 +48,13 @@ Per-property fields:
                                dicts (key order ignored)
                 When both apply they compose: timestamps first, then
                 json_order.
+
+Header parity: response headers are compared exactly by default (per
+behavior-contract's exact-header rule), excluding runtime artifacts
+(Date, Server, Content-Length, Connection, Keep-Alive,
+Transfer-Encoding). Use per-property `ignore_headers` to exempt
+property-specific headers such as Content-Type when the contract
+declares the media type non-contractual.
 
 Exit code 0 = all properties matched, 1 = any mismatch. Prints a per-
 property verdict table. Proven in two independent migration runs
@@ -59,6 +70,17 @@ import re
 import sys
 import urllib.error
 import urllib.request
+
+# Headers that vary per request for non-behavioral reasons and are never
+# contractual; stripped from header parity by default.
+RUNTIME_HEADERS = {
+    "date",
+    "server",
+    "content-length",
+    "connection",
+    "keep-alive",
+    "transfer-encoding",
+}
 
 TS_PATTERN = re.compile(
     r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]00:00)?"
@@ -83,12 +105,13 @@ def normalize_timestamps(obj):
     return obj
 
 
-def call(base: str, method: str, path: str, body) -> tuple[int, bytes]:
-    """Perform one request; return (status, raw_body).
+def call(base: str, method: str, path: str, body) -> tuple[int, bytes, dict]:
+    """Perform one request; return (status, raw_body, headers).
 
-    HTTPError (4xx/5xx) yields its status + body. Connection failures and
-    timeouts (URLError) are surfaced as (0, b"") so the harness can report
-    a mismatch instead of crashing when one server is down.
+    HTTPError (4xx/5xx) yields its status + body + headers. Connection
+    failures and timeouts (URLError) are surfaced as (0, b"", {}) so the
+    harness can report a mismatch instead of crashing when one server is
+    down.
     """
     url = f"{base}{path}"
     data = json.dumps(body).encode() if body is not None else None
@@ -97,11 +120,11 @@ def call(base: str, method: str, path: str, body) -> tuple[int, bytes]:
         req.add_header("Content-Type", "application/json")
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
-            return resp.status, resp.read()
+            return resp.status, resp.read(), dict(resp.headers)
     except urllib.error.HTTPError as e:
-        return e.code, e.read()
+        return e.code, e.read(), dict(e.headers)
     except urllib.error.URLError:
-        return 0, b""
+        return 0, b"", {}
 
 
 def parse_body(raw: bytes):
@@ -114,7 +137,7 @@ def parse_body(raw: bytes):
         return text
 
 
-def compare(case: dict, bs: int, bb, cs: int, cb) -> tuple[bool, str]:
+def compare(case: dict, bs: int, bb, bh: dict, cs: int, cb, ch: dict) -> tuple[bool, str]:
     # A connection failure (status 0 from call()) is never a valid response;
     # 0 == 0 must not compare equal when both servers are down.
     if bs == 0 or cs == 0:
@@ -123,6 +146,13 @@ def compare(case: dict, bs: int, bb, cs: int, cb) -> tuple[bool, str]:
         return False, f"status {bs} != {cs}"
     if case.get("status_only"):
         return True, "status OK (body not contractual)"
+    # Header parity: exact by default, minus runtime artifacts and any
+    # property-scoped ignore_headers.
+    ignore = set(h.lower() for h in case.get("ignore_headers", []))
+    hb = {k.lower(): v for k, v in bh.items() if k.lower() not in RUNTIME_HEADERS and k.lower() not in ignore}
+    hc = {k.lower(): v for k, v in ch.items() if k.lower() not in RUNTIME_HEADERS and k.lower() not in ignore}
+    if hb != hc:
+        return False, f"header mismatch: base={hb} cand={hc}"
     nb, nc = bb, cb
     if "timestamps" in case.get("normalize", []):
         nb, nc = normalize_timestamps(nb), normalize_timestamps(nc)
@@ -169,10 +199,10 @@ def main() -> int:
             case["path"],
             case.get("body"),
         )
-        bs, raw_b = call(args.baseline, method, path, body)
-        cs, raw_c = call(args.candidate, method, path, body)
+        bs, raw_b, hb = call(args.baseline, method, path, body)
+        cs, raw_c, hc = call(args.candidate, method, path, body)
         bb, cb = parse_body(raw_b), parse_body(raw_c)
-        ok, note = compare(case, bs, bb, cs, cb)
+        ok, note = compare(case, bs, bb, hb, cs, cb, hc)
         result = {
             "property_id": pid,
             "status": "pass" if ok else "mismatch",
