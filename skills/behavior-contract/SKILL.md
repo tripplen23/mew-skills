@@ -33,6 +33,17 @@ For each surface in the inventory, capture actual behavior by running the system
 
 Use `scripts/capture_behavior.py` to automate capture for common patterns. For custom systems, write a capture script specific to the project.
 
+**Spec is not the oracle; the running system is.** A declared spec (OpenAPI,
+swagger, README) may disagree with observed behavior — e.g. an OpenAPI
+operation declared `201` while the running baseline actually returns `204`
+(observed in a real run: people-api POST /api/people). When spec and live
+behavior differ, record the OBSERVED behavior as the contract property and
+note the discrepancy in the property evidence (`evidence.output` plus a
+`spec_discrepancy` note). A contract built from the spec alone produces a
+candidate that fails differential parity against the real baseline. Probe
+every operation live — happy path, error paths, and edge cases — before
+writing properties.
+
 For a **feature adoption or reconstruction**, separate three evidence classes:
 
 1. current target behavior, which may provide executable baseline, characterization, or regression oracles;

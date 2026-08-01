@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Validate all mew-skills artifacts.
 # Usage: bash scripts/validate.sh
-# Requires: agentskills (uvx --from skills-ref agentskills), python3, jq
+# Requires: agentskills (uvx --from skills-ref agentskills), python3, jq, jsonschema, pyyaml (python packages; e.g. pip install jsonschema pyyaml)
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"

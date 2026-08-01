@@ -62,6 +62,29 @@ python skills/differential-migration/scripts/diff_test.py \
   --output parity-report.json
 ```
 
+For an **HTTP API surface**, `diff_test.py` (stdin/stdout) cannot verify
+endpoints. Use the HTTP harness instead: it replays an identical request
+sequence against the running baseline and candidate servers and compares
+status + body under the contract's normalization rules:
+
+```bash
+python skills/differential-migration/scripts/http_diff_test.py \
+  --sequence fixtures/http-diff/cases.json \
+  --baseline http://127.0.0.1:5000 \
+  --candidate http://127.0.0.1:8080 \
+  --output parity-report.json
+```
+
+The sequence file declares one entry per contract property (method, path,
+body, per-property `normalize` list, optional `status_only` for
+framework-generated documents). Built-in normalizers: `timestamps`
+(ISO-8601 UTC microseconds -> placeholder), `json_order` (compare as dicts),
+`status_only` (compare status code only). Run the fixture
+(`fixtures/http-diff/`) as a smoke test: the candidate server is
+deliberately non-conformant, so the harness must report P003 and P004 as
+mismatches — a passing run of the harness against this fixture proves the
+harness still detects regressions.
+
 Use only normalization and tolerances approved in the contract. Compare:
 
 - exit codes and normalized outputs;
