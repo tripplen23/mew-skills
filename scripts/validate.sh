@@ -66,6 +66,28 @@ else
 fi
 
 echo ""
+echo "=== Metrics artifact schema (if present) ==="
+# Per-task measurement harness (mew#104) writes metrics.json into run dirs;
+# validate it against the metrics schema when present.
+if command -v jsonschema >/dev/null 2>&1; then
+  found=0
+  for f in $(find . -name "metrics.json" -not -path "./node_modules/*" 2>/dev/null); do
+    found=1
+    if jsonschema -i "$f" schemas/metrics.schema.json >/dev/null 2>&1; then
+      echo "  PASS: $f matches metrics schema"
+    else
+      echo "  FAIL: $f does not match metrics schema"
+      FAIL=1
+    fi
+  done
+  if [ "$found" -eq 0 ]; then
+    echo "  PASS: no metrics.json present (measure_metrics.py not run yet)"
+  fi
+else
+  echo "  SKIP: jsonschema not in PATH (install with pip install jsonschema)"
+fi
+
+echo ""
 echo "=== Frontmatter security check (no < or > in YAML) ==="
 for skill_md in skills/*/SKILL.md; do
   # Extract frontmatter (between first and second ---)

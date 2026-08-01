@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metrics.schema.json",
+  "title": "Per-task measurements for golden runs",
+  "description": "Per-task context, token, retry, wall-clock, and cost measurements for golden runs (mew#104).",
+  "type": "object",
+  "required": ["run_id", "measured_at", "source", "session", "totals", "phases"],
+  "properties": {
+    "run_id": { "type": "string" },
+    "measured_at": { "type": "string", "format": "date-time" },
+    "source": {
+      "type": "object",
+      "required": ["instrument", "state_db", "session_ids"],
+      "properties": {
+        "instrument": { "type": "string" },
+        "state_db": { "type": "string" },
+        "session_ids": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "session": {
+      "type": "object",
+      "required": ["model", "billing_provider", "wall_clock_seconds", "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens", "reasoning_tokens", "retry_count", "estimated_cost_usd", "actual_cost_usd", "cost_status", "api_call_count"],
+      "properties": {
+        "model": { "type": "string" },
+        "billing_provider": { "type": "string" },
+        "wall_clock_seconds": { "type": "number" },
+        "input_tokens": { "type": "integer" },
+        "output_tokens": { "type": "integer" },
+        "cache_read_tokens": { "type": "integer" },
+        "cache_write_tokens": { "type": "integer" },
+        "reasoning_tokens": { "type": "integer" },
+        "retry_count": { "type": "integer", "description": "agent-level rewind_count proxy; API-level retries not separately exposed" },
+        "estimated_cost_usd": { "type": "number" },
+        "actual_cost_usd": { "type": "number" },
+        "cost_status": { "type": "string" },
+        "api_call_count": { "type": "integer" }
+      }
+    },
+    "totals": {
+      "type": "object",
+      "required": ["input_tokens", "output_tokens", "cache_read_tokens", "retry_count", "estimated_cost_usd", "wall_clock_seconds"],
+      "properties": {
+        "input_tokens": { "type": "integer" },
+        "output_tokens": { "type": "integer" },
+        "cache_read_tokens": { "type": "integer" },
+        "retry_count": { "type": "integer" },
+        "estimated_cost_usd": { "type": "number" },
+        "wall_clock_seconds": { "type": "number" }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["phase", "wall_clock_seconds", "input_tokens", "output_tokens"],
+        "properties": {
+          "phase": { "type": "string" },
+          "wall_clock_seconds": { "type": "number" },
+          "input_tokens": { "type": "integer" },
+          "output_tokens": { "type": "integer" },
+          "cache_read_tokens": { "type": "integer" },
+          "attribution": { "type": "string", "description": "how phase token counts were derived (e.g. message-timestamp attribution)" }
+        }
+      }
+    }
+  }
+}
