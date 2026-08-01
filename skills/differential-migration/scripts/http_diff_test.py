@@ -156,9 +156,13 @@ def main() -> int:
     with open(args.sequence) as f:
         seq = json.load(f)
 
+    cases = seq.get("properties")
+    if not isinstance(cases, list) or not cases:
+        ap.error("--sequence must define at least one property")
+
     results = []
     fails = 0
-    for case in seq["properties"]:
+    for case in cases:
         pid, method, path, body = (
             case["id"],
             case["method"],
@@ -169,21 +173,25 @@ def main() -> int:
         cs, raw_c = call(args.candidate, method, path, body)
         bb, cb = parse_body(raw_b), parse_body(raw_c)
         ok, note = compare(case, bs, bb, cs, cb)
+        result = {
+            "property_id": pid,
+            "status": "pass" if ok else "mismatch",
+            "old_output": {"status": bs, "body": bb},
+            "new_output": {"status": cs, "body": cb},
+            "normalized_equal": ok,
+        }
         if not ok:
             fails += 1
-        results.append(
-            {
-                "property_id": pid,
-                "status": "pass" if ok else "mismatch",
-                "old_output": {"status": bs, "body": bb},
-                "new_output": {"status": cs, "body": cb},
-                "normalized_equal": ok,
-                "note": note,
-            }
-        )
+            result.update(
+                {
+                    "classification": args.classification,
+                    "investigation": args.investigation or note,
+                }
+            )
+        results.append(result)
         print(f"{'PASS' if ok else 'FAIL'} {pid} {method} {path}: {note}")
 
-    total = len(seq["properties"])
+    total = len(cases)
     print(f"\n{total - fails}/{total} properties matched")
     if args.output:
         if not args.run_id:
@@ -197,24 +205,6 @@ def main() -> int:
         ]
         if args.classification not in allowed_class:
             ap.error(f"--classification must be one of {allowed_class}")
-        report_results = []
-        for res in results:
-            entry = {"property_id": res["property_id"], "status": res["status"]}
-            if res["status"] == "mismatch":
-                entry.update({
-                    "old_output": res["old_output"],
-                    "new_output": res["new_output"],
-                    "normalized_equal": False,
-                    "classification": args.classification,
-                    "investigation": args.investigation or res["note"],
-                })
-            else:
-                entry.update({
-                    "old_output": res["old_output"],
-                    "new_output": res["new_output"],
-                    "normalized_equal": True,
-                })
-            report_results.append(entry)
         with open(args.output, "w") as f:
             json.dump(
                 {
@@ -223,7 +213,7 @@ def main() -> int:
                     "passed": total - fails,
                     "mismatches": fails,
                     "verdict": "pass" if fails == 0 else "fail",
-                    "results": report_results,
+                    "results": results,
                 },
                 f,
                 indent=2,
