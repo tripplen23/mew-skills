@@ -23,3 +23,41 @@ the target repository's tracked `.gitignore`.
 
 The pack anchor is always installed at `.agents/mew-skills` so skills can find
 schemas and policies independent of the host's skill directory.
+
+## Global install
+
+Pass `--global` to install into the user-level skill directory of the chosen
+host (relative to `$HOME`) instead of a target repository. No git worktree is
+required. OpenCode, Codex, and Agent-Skills-compatible hosts share
+`~/.agents/skills/`, so one install covers several agents:
+
+| Host                | Global path         | Command                                                            |
+| ------------------- | ------------------- | ------------------------------------------------------------------ |
+| OpenCode            | `~/.agents/skills/` | `python3 .../install-agent-skills.py --global --host opencode`     |
+| Claude Code         | `~/.claude/skills/` | `python3 .../install-agent-skills.py --global --host claude`       |
+| Codex / agent-skills | `~/.agents/skills/` | `python3 .../install-agent-skills.py --global --host codex`        |
+| Kiro (IDE + CLI)    | `~/.kiro/skills/`   | `python3 .../install-agent-skills.py --global --host kiro --copy`  |
+
+The global anchor lives at `~/.agents/mew-skills`.
+
+## Auto-update
+
+Global installs symlink skills to the pack by default. Re-pulling the pack
+(which `install.sh` does on every run) refreshes every installed copy at once.
+To refresh all already-installed global skill directories — including linking
+any newly added skills — run:
+
+```bash
+bash install.sh update
+```
+
+or, against the cached pack directly:
+
+```bash
+python3 .../install-agent-skills.py --global --update
+```
+
+`--update` scans each known host's global directory and reinstalls wherever a
+mew-skills skill is present, so new skills propagate without re-running the
+full install per host. `--copy` installs are not auto-updated by symlinks; pass
+`update --copy` to refresh them.
