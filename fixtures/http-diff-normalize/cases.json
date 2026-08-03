@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {"id": "P001", "method": "GET", "path": "/items", "body": null, "normalize": ["timestamps", "json_order"]},
+    {"id": "P002", "method": "GET", "path": "/items/1", "body": null, "normalize": ["timestamps"]},
+    {"id": "P003", "method": "GET", "path": "/items/999", "body": null, "normalize": []},
+    {"id": "P004", "method": "POST", "path": "/items", "body": {"name": "Charlie"}, "normalize": []}
+  ]
+}

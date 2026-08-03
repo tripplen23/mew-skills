@@ -1,0 +1,11 @@
+{
+  "id": "http-diff-normalize",
+  "skill": "differential-migration",
+  "oracle_tier": "hard",
+  "linked_lesson": "L-http-diff",
+  "run_id": "20260801-145954-217cab5",
+  "fails_before": "7484fde (pre-review harness: full-string match only, no header parity)",
+  "passes_after": "e00f584 (UTC-only normalizer + header parity + run-id schema)",
+  "description": "HTTP differential harness: 2 designed regressions (P003 404-shape, P004 201-vs-204) must fail, 2 properties must pass; server-down must exit 1 (no false pass)",
+  "gate_command": "bash gate.sh"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "timestamp-format-utc",
+  "skill": "migration-planner",
+  "oracle_tier": "hard",
+  "linked_lesson": "L-timestamp-utc",
+  "run_id": "20260801-181337-217cab5",
+  "fails_before": "6945cb7~1 (normalizer collapsed arbitrary offsets — false pass on +05:30)",
+  "passes_after": "6945cb7 (UTC-only collapse: +05:30 visible as mismatch)",
+  "description": "Timestamp format check: full-string/embedded/Z-suffix/+00:00/seconds-only normalize to <TS>; non-UTC offsets (+05:30) stay visible (no false pass)",
+  "gate_command": "bash gate.sh"
+}
