@@ -47,14 +47,18 @@ def load_config(path: Path) -> dict:
 
 
 def detect_version(command: str, args: list[str]) -> str | None:
-    """Run the check command and return its stdout (trimmed) or None."""
+    """Run the check command and return its first non-empty stream (trimmed).
+
+    Uses the resolved absolute path for determinism and reads both stdout and
+    stderr, since several tools print version information to stderr.
+    """
     try:
         proc = subprocess.run(
             [command, *args], capture_output=True, text=True, timeout=20
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
-    out = (proc.stdout or "").strip()
+    out = (proc.stdout or "").strip() or (proc.stderr or "").strip()
     return out or None
 
 
@@ -63,7 +67,7 @@ def check_one(entry: dict, stack: str) -> dict:
     check_id = entry["id"]
     purpose = entry.get("purpose", "")
     command = entry["command"]
-    args = entry.get("args") or []
+    args = entry.get("args") or ["--version"]
     required = bool(entry.get("required", True))
     declared_stacks = entry.get("stacks")
     applicable = declared_stacks is None or stack in declared_stacks
@@ -82,7 +86,8 @@ def check_one(entry: dict, stack: str) -> dict:
             "command": command, "args": args, "resolved_path": None,
             "version_output": None, "min_version": None, "detected_version": None,
         }
-    version_output = detect_version(command, args)
+    probe_cmd = resolved if resolved else command
+    version_output = detect_version(probe_cmd, args)
     detected = extract_version(version_output) if version_output else None
     min_version = entry.get("min_version")
     status = "available"
@@ -109,15 +114,18 @@ def extract_version(text: str) -> str | None:
 
 
 def version_ge(a: str, b: str) -> bool:
-    """Compare dotted numeric versions; non-numeric tail ignored."""
+    """Compare dotted numeric versions; missing trailing components = 0."""
     import re
     def nums(v: str) -> list[int]:
         return [int(x) for x in re.findall(r"\d+", v)]
     na, nb = nums(a), nums(b)
+    length = max(len(na), len(nb))
+    na += [0] * (length - len(na))
+    nb += [0] * (length - len(nb))
     for x, y in zip(na, nb):
         if x != y:
             return x > y
-    return len(na) >= len(nb)
+    return True
 
 
 def main() -> int:

@@ -4,7 +4,6 @@
 Fixtures live in fixtures/capability-preflight/:
   - config-minimal.yaml   : universal requirements only
   - config-full.yaml      : universal + stack-specific + optional
-  - report-good.json      : expected report for config-minimal on this host
   - report-bad-schema.json: deliberately invalid report (schema must reject)
 
 Every test runs the real script in a subprocess (no mocks) so the
@@ -129,6 +128,16 @@ class CapabilityPreflightTest(unittest.TestCase):
         self.assertIn("toolchain-cargo", by_id)
         # Node check stays visible for traceability but is not applicable.
         self.assertEqual(by_id["toolchain-node"]["status"], "not_applicable")
+
+    def test_version_ge_equal_prefix_shorter_counts_as_satisfied(self):
+        # 3.10 and 3.10.0 are the same version; shorter prefix must satisfy.
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import check_capabilities as cc
+        self.assertTrue(cc.version_ge("3.10", "3.10.0"))
+        self.assertTrue(cc.version_ge("3.10.0", "3.10"))
+        self.assertTrue(cc.version_ge("3.11.4", "3.11"))
+        self.assertFalse(cc.version_ge("3.9", "3.10.0"))
+        self.assertFalse(cc.version_ge("3.10", "3.11.0"))
 
 
 if __name__ == "__main__":

@@ -46,6 +46,7 @@ checks:
   - id: toolchain-go
     purpose: Go target build and test gates
     command: go
+    args: [version]
     stacks: [go]
     required: true
   - id: toolchain-uvicorn

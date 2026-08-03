@@ -26,6 +26,7 @@ checks:
   - id: toolchain-go
     purpose: Go stack builds and tests
     command: go
+    args: [version]
     stacks: [go]
     required: true
   - id: toolchain-uvicorn
