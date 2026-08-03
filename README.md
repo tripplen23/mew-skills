@@ -41,6 +41,8 @@ JSON Schema files validate every artifact a skill produces:
 - `schemas/repro.schema.json` — Phase 0 reproducible environment pin
 - `schemas/provenance.schema.json` — provenance & licensing (SPDX, SLSA)
 - `schemas/repo-inventory.schema.json` — scoped target surfaces, dependencies, evidence references, and exclusions
+- `schemas/capability-report.schema.json` — read-only host capability preflight report
+- `schemas/derivations.schema.json` — run-artifact derivation record (artifact → inputs with SHA-256)
 
 ## Policies
 

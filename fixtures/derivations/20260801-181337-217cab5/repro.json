@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "system": {
+    "os": "linux",
+    "arch": "x86_64",
+    "cpu_governor": "unknown"
+  },
+  "interpreter": {
+    "python": "3.13.5",
+    "PYTHONHASHSEED": "0"
+  },
+  "deps": {
+    "lockfile": "none",
+    "hash_mode": "none",
+    "notes": "Pipfile pins flask-sqlalchemy==2.5.1 + sqlalchemy==1.4.3 (Py3.8 era) which break on Python 3.11+/Flask 3 (import _app_ctx_stack, marshmallow 4, connexion flask extra). Baseline reproduced with flask-sqlalchemy 3.1.1 + marshmallow 4.3.0 + connexion 3.3.0 + flask 3.1.3 on Python 3.13. Seed script scripts/repro_seed.py wraps app_context; repo's build_database.py targets 2.x and fails on 3.x. This dependency drift is captured in retro."
+  },
+  "source_ref": {
+    "vcs": "git",
+    "commit": "217cab59e6705e670dae3b51651a035cf202f5fc",
+    "dirty": false
+  }
+}

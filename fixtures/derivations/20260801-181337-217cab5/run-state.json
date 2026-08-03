@@ -1,0 +1,32 @@
+{
+  "run_id": "20260801-181337-217cab5",
+  "request_sha256": "21ed2d4fa5e78fedaa86df3dc46aecf32a713e7fceef70e2b6351d78f13b6766",
+  "updated_at": "2026-08-01T18:14:40Z",
+  "items": [
+    {
+      "id": "W001",
+      "title": "Port people-api CRUD to Rust (axum+rusqlite) preserving HTTP contract",
+      "status": "done",
+      "run_refs": [
+        "20260801-181337-217cab5"
+      ],
+      "contract_properties": [
+        "P001",
+        "P002",
+        "P003",
+        "P004",
+        "P005",
+        "P006",
+        "P007",
+        "P008",
+        "P009",
+        "P010",
+        "P011"
+      ],
+      "plan_units": [
+        "U001"
+      ]
+    }
+  ],
+  "open_decisions": []
+}

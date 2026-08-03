@@ -1,0 +1,76 @@
+run_id: "20260801-181337-217cab5"
+semantic_map:
+  - category: exceptions
+    source_pattern: "Flask abort(404/409, msg) -> Connexion emits RFC 9457 problem+json {type: about:blank, title, detail, status}"
+    target_pattern: "axum handler returns Json(ProblemJson) with explicit status; helper fn problem(status, title, detail)"
+    risk: medium
+    gotchas:
+      - "Three distinct 404 detail wordings exist (GET 'Person with person_id X not found', PUT 'Person with id: X not found', DELETE 'Person not found for id X') - each must be preserved exactly"
+      - "DELETE success is 200 with text body, not 204"
+  - category: ownership
+    source_pattern: "Connexion operationId -> people.read_all/create/read_one/update/delete functions taking dicts"
+    target_pattern: "axum handlers taking Path/Json extractors; models via rusqlite"
+    risk: medium
+    gotchas:
+      - "POST create() returns None -> Connexion 204. Rust must return StatusCode::NO_CONTENT with empty body"
+      - "PUT update() returns (data, 200) tuple -> 200 with JSON body"
+  - category: time
+    source_pattern: "datetime.utcnow -> ISO 8601 UTC with microseconds via marshmallow (e.g. 2026-08-01T14:59:39.765321)"
+    target_pattern: "chrono::Utc::now().format('%Y-%m-%dT%H:%M:%S%.6f')"
+    risk: medium
+    gotchas:
+      - "Python includes 6-digit microseconds; %.6f must match; no timezone suffix (naive UTC)"
+  - category: string_encoding
+    source_pattern: "JSON body via marshmallow schema.load"
+    target_pattern: "serde_json::Value / struct Person with #[derive(Serialize, Deserialize)]"
+    risk: low
+    gotchas:
+      - "Input validation: baseline does NOT validate fname/lname presence - missing fields flow through as None; candidate should match leniency"
+pilot_units:
+  - "U001"
+units:
+  - id: U001
+    name: "Port people CRUD API to Rust (axum + rusqlite + serde) preserving all 11 contract properties"
+    source_paths:
+      - "people.py"
+      - "models.py"
+      - "config.py"
+      - "server.py"
+      - "swagger.yml"
+    target_paths:
+      - "Cargo.toml"
+      - "src/main.rs"
+      - "src/models.rs"
+      - "src/db.rs"
+      - "src/routes.rs"
+      - "src/problem.rs"
+    depends_on: []
+    contract_properties:
+      - "P001"
+      - "P002"
+      - "P003"
+      - "P004"
+      - "P005"
+      - "P006"
+      - "P007"
+      - "P008"
+      - "P009"
+      - "P010"
+      - "P011"
+    risk: medium
+    pilot: true
+stop_conditions:
+  - "rusqlite cannot reproduce the SQLite schema (person_id INTEGER PRIMARY KEY AUTOINCREMENT, lname/fname VARCHAR(100) indexed, timestamp DATETIME)"
+  - "Cannot reproduce ISO UTC microsecond timestamp format"
+  - "Any contract property fails differential comparison after 3 fix attempts"
+performance_gates: []
+worker_policy:
+  isolation: none
+  one_writer_per_unit: true
+  editable_paths:
+    - "src/"
+    - "Cargo.toml"
+    - "scripts/"
+  protected_paths:
+    - ".mew/"
+    - "swagger.yml"

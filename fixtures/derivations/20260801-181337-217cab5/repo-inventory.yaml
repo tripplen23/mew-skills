@@ -1,0 +1,60 @@
+run_id: "20260801-181337-217cab5"
+target:
+  repo: "/tmp/gt2-people"
+  commit: "217cab59e6705e670dae3b51651a035cf202f5fc"
+  branch: "master"
+  dirty: false
+existing_surfaces:
+  api:
+    paths:
+      - "swagger.yml"
+      - "server.py"
+      - "config.py"
+      - "people.py"
+      - "models.py"
+      - "build_database.py"
+    facts:
+      - "Spec-first: swagger.yml (Swagger 2.0) defines basePath /api and 5 operations on /people and /people/{person_id}"
+      - "Flask + Connexion 3.3.0 + SQLAlchemy + SQLite (people.db)"
+      - "GET /api/people -> 200 sorted by lname; fields fname/lname/person_id/timestamp (ISO UTC with microseconds)"
+      - "POST /api/people -> ACTUAL 204 empty (spec declares 201 but create() returns nothing)"
+      - "POST duplicate (fname+lname) -> 409 problem+json RFC 9457"
+      - "GET /api/people/{id} -> 200 | 404 problem+json 'Person with person_id {id} not found'"
+      - "PUT /api/people/{id} -> 200 updated | 404 'Person with id: {id} not found' | 409 conflict"
+      - "DELETE /api/people/{id} -> ACTUAL 200 text/html 'Person with id {id} successfully deleted' (not 204)"
+      - "DELETE missing -> 404 'Person not found for id {id}'"
+      - "Errors are RFC 9457 problem+json: {type: about:blank, title, detail, status}"
+      - "Seed: 3 people (Doug Farrell, Kent Brockman, Bunny Easter)"
+      - "home page GET / renders template home.html"
+  tests:
+    paths:
+      - "tests/test_mock_server.py"
+    facts:
+      - "Single pytest test exercising users.services.get_users against a mock server (unrelated to CRUD API)"
+dependency_map:
+  connexion:
+    dependents: ["config.py", "server.py"]
+  flask:
+    dependents: ["connexion", "config.py", "people.py"]
+  flask_sqlalchemy:
+    dependents: ["config.py", "models.py", "people.py"]
+  sqlalchemy:
+    dependents: ["models.py"]
+  marshmallow:
+    dependents: ["models.py"]
+evidence_references:
+  - ".mew/runs/20260801-181337-217cab5/evidence.jsonl"
+  - ".mew/runs/20260801-181337-217cab5/repro.json"
+  - "scripts/capture_behavior.py"
+exclusions:
+  - scope: "covid_tracker/"
+    reason: "Unrelated second service in the repo; not part of the people API surface"
+  - scope: "users/ + tests/test_mock_server.py"
+    reason: "Mock-server utility unrelated to the CRUD contract"
+  - scope: "templates/ + static/"
+    reason: "Presentation layer for home page; not part of the API contract being ported"
+checks_discovered:
+  reproduce:
+    - "uv run python scripts/repro_seed.py (3 people)"
+    - "uv run python scripts/capture_behavior.py (endpoint status/body capture)"
+blockers: []

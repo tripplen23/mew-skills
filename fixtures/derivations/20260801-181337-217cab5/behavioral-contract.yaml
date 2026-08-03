@@ -1,0 +1,145 @@
+approved_by: tripplen23
+approved_at: "2026-08-01T15:03:32.182565+00:00"
+contract_id: "20260801-181337-217cab5"
+source_commit: "217cab59e6705e670dae3b51651a035cf202f5fc"
+properties:
+  - id: P001
+    surface: api
+    path: "GET /api/people"
+    property: "Returns 200 JSON array of people sorted by lname, each with fname/lname/person_id/timestamp"
+    preservation: preserve
+    oracle:
+      kind: executable-baseline
+      command: "uv run python scripts/capture_behavior.py"
+    evidence:
+      input: {}
+      output: { status: 200, first_item: { fname: "Kent", lname: "Brockman", person_id: 2 }, sorted_by: lname }
+      capture_method: asgi_test_client
+  - id: P002
+    surface: api
+    path: "GET /api/people/{person_id}"
+    property: "Returns 200 with the full person object for an existing id"
+    preservation: preserve
+    oracle:
+      kind: executable-baseline
+      command: "uv run python scripts/capture_behavior.py"
+    evidence:
+      input: { person_id: 1 }
+      output: { status: 200, body: { fname: "Doug", lname: "Farrell", person_id: 1 } }
+      capture_method: asgi_test_client
+  - id: P003
+    surface: api
+    path: "GET /api/people/{person_id}"
+    property: "Returns 404 RFC 9457 problem+json with detail 'Person with person_id {id} not found' for a missing id"
+    preservation: preserve
+    oracle:
+      kind: executable-baseline
+      command: "uv run python scripts/capture_behavior.py"
+    evidence:
+      input: { person_id: 999 }
+      output: { status: 404, body: { type: "about:blank", title: "Not Found", detail: "Person with person_id 999 not found", status: 404 } }
+      capture_method: asgi_test_client
+  - id: P004
+    surface: api
+    path: "POST /api/people"
+    property: "Creates a person and returns 204 with empty body (actual behavior; swagger.yml declares 201 but create() returns nothing)"
+    preservation: preserve
+    oracle:
+      kind: executable-baseline
+      command: "uv run python scripts/capture_behavior.py"
+    evidence:
+      input: { fname: "New", lname: "Person" }
+      output: { status: 204, body: "" }
+      capture_method: asgi_test_client
+  - id: P005
+    surface: api
+    path: "POST /api/people"
+    property: "Returns 409 RFC 9457 problem+json 'Person with {fname} {lname} already exists' when fname+lname duplicate"
+    preservation: preserve
+    oracle:
+      kind: executable-baseline
+      command: "uv run python scripts/capture_behavior.py"
+    evidence:
+      input: { fname: "Kent", lname: "Brockman" }
+      output: { status: 409, body: { type: "about:blank", title: "Conflict", detail: "Person with Kent Brockman already exists", status: 409 } }
+      capture_method: asgi_test_client
+  - id: P006
+    surface: api
+    path: "PUT /api/people/{person_id}"
+    property: "Updates a person and returns 200 with the updated person object"
+    preservation: preserve
+    oracle:
+      kind: executable-baseline
+      command: "uv run python scripts/capture_behavior.py"
+    evidence:
+      input: { person_id: 1, body: { fname: "Doug", lname: "Farrell" } }
+      output: { status: 200, body: { fname: "Doug", lname: "Farrell", person_id: 1 } }
+      capture_method: asgi_test_client
+  - id: P007
+    surface: api
+    path: "PUT /api/people/{person_id}"
+    property: "Returns 404 problem+json with detail 'Person with id: {id} not found' for a missing id"
+    preservation: preserve
+    oracle:
+      kind: executable-baseline
+      command: "uv run python scripts/capture_behavior.py"
+    evidence:
+      input: { person_id: 999 }
+      output: { status: 404, body: { type: "about:blank", title: "Not Found", detail: "Person with id: 999 not found", status: 404 } }
+      capture_method: asgi_test_client
+  - id: P008
+    surface: api
+    path: "PUT /api/people/{person_id}"
+    property: "Returns 409 problem+json when update would collide with an existing different person (fname+lname)"
+    preservation: preserve
+    oracle:
+      kind: executable-baseline
+      command: "uv run python scripts/capture_behavior.py"
+    evidence:
+      input: { person_id: 2, body: { fname: "Doug", lname: "Farrell" } }
+      output: { status: 409, body: { type: "about:blank", title: "Conflict", detail: "Person with Doug Farrell already exists", status: 409 } }
+      capture_method: asgi_test_client
+  - id: P009
+    surface: api
+    path: "DELETE /api/people/{person_id}"
+    property: "Deletes a person and returns 200 with text body 'Person with id {id} successfully deleted' (actual behavior, NOT 204; content-type text/html)"
+    preservation: preserve
+    oracle:
+      kind: executable-baseline
+      command: "uv run python scripts/capture_behavior.py"
+    evidence:
+      input: { person_id: 1 }
+      output: { status: 200, body: "Person with id 1 successfully deleted", content_type: "text/html" }
+      capture_method: asgi_test_client
+  - id: P010
+    surface: api
+    path: "DELETE /api/people/{person_id}"
+    property: "Returns 404 problem+json with detail 'Person not found for id {id}' for a missing id"
+    preservation: preserve
+    oracle:
+      kind: executable-baseline
+      command: "uv run python scripts/capture_behavior.py"
+    evidence:
+      input: { person_id: 777 }
+      output: { status: 404, body: { type: "about:blank", title: "Not Found", detail: "Person not found for id 777", status: 404 } }
+      capture_method: asgi_test_client
+  - id: P011
+    surface: api
+    path: "GET /"
+    property: "Home page returns 200 (template rendered)"
+    preservation: preserve
+    oracle:
+      kind: executable-baseline
+      command: "uv run python scripts/capture_behavior.py"
+    evidence:
+      input: {}
+      output: { status: 200 }
+      capture_method: asgi_test_client
+intentional_changes: []
+normalization_rules:
+  - "JSON key order may differ between frameworks"
+  - "timestamp values are generated at insert time and necessarily differ between baseline and candidate runs; compare format (ISO 8601 UTC) and presence, not exact value"
+  - "content-type for the DELETE 200 body may be text/html or text/plain; the body TEXT is contractual, the exact media type is not"
+  - "RFC 9457 problem+json body: type/title/detail/status fields must match exactly"
+  - "Python marshmallow serializes timestamps as ISO UTC with microseconds; Rust chrono must emit the same format (e.g. 2026-08-01T14:59:39.765321)"
+performance_budgets: []

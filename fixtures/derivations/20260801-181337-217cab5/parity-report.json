@@ -1,0 +1,260 @@
+{
+  "run_id": "20260801-181337-217cab5",
+  "total_properties": 11,
+  "passed": 11,
+  "mismatches": 0,
+  "verdict": "pass",
+  "results": [
+    {
+      "property_id": "P001",
+      "status": "pass",
+      "old_output": {
+        "status": 200,
+        "body": [
+          {
+            "fname": "Kent",
+            "lname": "Brockman",
+            "person_id": 2,
+            "timestamp": "2026-08-01T18:13:22.461364"
+          },
+          {
+            "fname": "Bunny",
+            "lname": "Easter",
+            "person_id": 3,
+            "timestamp": "2026-08-01T18:13:22.461367"
+          },
+          {
+            "fname": "Doug",
+            "lname": "Farrell",
+            "person_id": 1,
+            "timestamp": "2026-08-01T18:13:22.461359"
+          }
+        ]
+      },
+      "new_output": {
+        "status": 200,
+        "body": [
+          {
+            "person_id": 2,
+            "fname": "Kent",
+            "lname": "Brockman",
+            "timestamp": "2026-08-01T18:13:21.976911"
+          },
+          {
+            "person_id": 3,
+            "fname": "Bunny",
+            "lname": "Easter",
+            "timestamp": "2026-08-01T18:13:21.976911"
+          },
+          {
+            "person_id": 1,
+            "fname": "Doug",
+            "lname": "Farrell",
+            "timestamp": "2026-08-01T18:13:21.976911"
+          }
+        ]
+      },
+      "normalized_equal": true
+    },
+    {
+      "property_id": "P002",
+      "status": "pass",
+      "old_output": {
+        "status": 200,
+        "body": {
+          "fname": "Doug",
+          "lname": "Farrell",
+          "person_id": 1,
+          "timestamp": "2026-08-01T18:13:22.461359"
+        }
+      },
+      "new_output": {
+        "status": 200,
+        "body": {
+          "person_id": 1,
+          "fname": "Doug",
+          "lname": "Farrell",
+          "timestamp": "2026-08-01T18:13:21.976911"
+        }
+      },
+      "normalized_equal": true
+    },
+    {
+      "property_id": "P003",
+      "status": "pass",
+      "old_output": {
+        "status": 404,
+        "body": {
+          "type": "about:blank",
+          "title": "Not Found",
+          "detail": "Person with person_id 999 not found",
+          "status": 404
+        }
+      },
+      "new_output": {
+        "status": 404,
+        "body": {
+          "type": "about:blank",
+          "title": "Not Found",
+          "detail": "Person with person_id 999 not found",
+          "status": 404
+        }
+      },
+      "normalized_equal": true
+    },
+    {
+      "property_id": "P004",
+      "status": "pass",
+      "old_output": {
+        "status": 204,
+        "body": ""
+      },
+      "new_output": {
+        "status": 204,
+        "body": ""
+      },
+      "normalized_equal": true
+    },
+    {
+      "property_id": "P005",
+      "status": "pass",
+      "old_output": {
+        "status": 409,
+        "body": {
+          "type": "about:blank",
+          "title": "Conflict",
+          "detail": "Person with Clean Run already exists",
+          "status": 409
+        }
+      },
+      "new_output": {
+        "status": 409,
+        "body": {
+          "type": "about:blank",
+          "title": "Conflict",
+          "detail": "Person with Clean Run already exists",
+          "status": 409
+        }
+      },
+      "normalized_equal": true
+    },
+    {
+      "property_id": "P006",
+      "status": "pass",
+      "old_output": {
+        "status": 200,
+        "body": {
+          "fname": "Doug",
+          "lname": "Farrell",
+          "person_id": 1,
+          "timestamp": "2026-08-01T18:13:22.461359"
+        }
+      },
+      "new_output": {
+        "status": 200,
+        "body": {
+          "person_id": 1,
+          "fname": "Doug",
+          "lname": "Farrell",
+          "timestamp": "2026-08-01T18:13:31.306827"
+        }
+      },
+      "normalized_equal": true
+    },
+    {
+      "property_id": "P007",
+      "status": "pass",
+      "old_output": {
+        "status": 404,
+        "body": {
+          "type": "about:blank",
+          "title": "Not Found",
+          "detail": "Person with id: 999 not found",
+          "status": 404
+        }
+      },
+      "new_output": {
+        "status": 404,
+        "body": {
+          "type": "about:blank",
+          "title": "Not Found",
+          "detail": "Person with id: 999 not found",
+          "status": 404
+        }
+      },
+      "normalized_equal": true
+    },
+    {
+      "property_id": "P008",
+      "status": "pass",
+      "old_output": {
+        "status": 409,
+        "body": {
+          "type": "about:blank",
+          "title": "Conflict",
+          "detail": "Person with Doug Farrell already exists",
+          "status": 409
+        }
+      },
+      "new_output": {
+        "status": 409,
+        "body": {
+          "type": "about:blank",
+          "title": "Conflict",
+          "detail": "Person with Doug Farrell already exists",
+          "status": 409
+        }
+      },
+      "normalized_equal": true
+    },
+    {
+      "property_id": "P009",
+      "status": "pass",
+      "old_output": {
+        "status": 200,
+        "body": "Person with id 1 successfully deleted"
+      },
+      "new_output": {
+        "status": 200,
+        "body": "Person with id 1 successfully deleted"
+      },
+      "normalized_equal": true
+    },
+    {
+      "property_id": "P010",
+      "status": "pass",
+      "old_output": {
+        "status": 404,
+        "body": {
+          "type": "about:blank",
+          "title": "Not Found",
+          "detail": "Person not found for id 777",
+          "status": 404
+        }
+      },
+      "new_output": {
+        "status": 404,
+        "body": {
+          "type": "about:blank",
+          "title": "Not Found",
+          "detail": "Person not found for id 777",
+          "status": 404
+        }
+      },
+      "normalized_equal": true
+    },
+    {
+      "property_id": "P011",
+      "status": "pass",
+      "old_output": {
+        "status": 200,
+        "body": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Welcome to people db</title>\n    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css\">\n    <link rel=\"stylesheet\" href=\"static/css/home.css\">\n    <script\n      src=\"http://code.jquery.com/jquery-3.3.1.min.js\"\n      integrity=\"sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=\"\n      crossorigin=\"anonymous\">\n    </script>\n</head>\n<body>\n    <div class=\"container\">\n        <h1 class=\"banner\">People Demo Application</h1>\n        <div class=\"section editor\">\n            <label for=\"fname\">First Name\n                <input id=\"fname\" type=\"text\" />\n            </label>\n            <br />\n            <label for=\"lname\">Last Name\n                <input id=\"lname\" type=\"text\" />\n            </label>\n            <br />\n            <button id=\"create\">Create</button>\n            <button id=\"update\">Update</button>\n            <button id=\"delete\">Delete</button>\n            <button id=\"reset\">Reset</button>\n        </div>\n        <div class=\"people\">\n            <table>\n                <caption>People</caption>\n                <thead>\n                    <tr>\n                        <th>First Name</th>\n                        <th>Last Name</th>\n                        <th>Update Time</th>\n                    </tr>\n                </thead>\n                <tbody>\n                </tbody>\n            </table>\n        </div>\n        <div class=\"error\">\n        </div>\n    </div>\n</body>\n<script src=\"static/js/home.js\"></script>\n</html>"
+      },
+      "new_output": {
+        "status": 200,
+        "body": "OK"
+      },
+      "normalized_equal": true
+    }
+  ]
+}
