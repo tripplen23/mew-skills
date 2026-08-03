@@ -139,6 +139,42 @@ class CapabilityPreflightTest(unittest.TestCase):
         self.assertFalse(cc.version_ge("3.9", "3.10.0"))
         self.assertFalse(cc.version_ge("3.10", "3.11.0"))
 
+    def test_failed_probe_is_incompatible_and_blocks(self):
+        p = run_check(
+            "--config", str(FIXTURES / "config-failed-probe.yaml"),
+            "--output", "/tmp/cap-failed-probe.json",
+        )
+        self.assertNotEqual(p.returncode, 0)
+        report = load_report("/tmp/cap-failed-probe.json")
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["checks"][0]["status"], "incompatible")
+
+    def test_invalid_manifest_writes_structured_failure_report(self):
+        p = run_check(
+            "--config", str(FIXTURES / "config-invalid-manifest.yaml"),
+            "--output", "/tmp/cap-invalid-manifest.json",
+        )
+        self.assertNotEqual(p.returncode, 0)
+        report = load_report("/tmp/cap-invalid-manifest.json")
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["checks"][0]["id"], "manifest")
+        self.assertEqual(report["checks"][0]["status"], "incompatible")
+
+    def test_schema_rejects_pass_with_required_missing_check(self):
+        import jsonschema
+        with open(SCHEMA) as f:
+            schema = json.load(f)
+        contradictory = load_report(str(FIXTURES / "report-pass-with-required-missing.json"))
+        with self.assertRaises(jsonschema.ValidationError):
+            jsonschema.validate(contradictory, schema)
+
+    def test_qualified_prerelease_is_not_treated_as_final_release(self):
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import check_capabilities as cc
+        self.assertIsNone(cc.extract_version("Python 3.10.0rc1"))
+        self.assertIsNone(cc.extract_version("tool 2.0.0-beta.1"))
+        self.assertEqual(cc.extract_version("Python 3.10.0"), "3.10.0")
+
 
 if __name__ == "__main__":
     unittest.main()

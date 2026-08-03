@@ -164,6 +164,14 @@ Update state after approval, work start, verification, defer/cancel decisions, a
 5. Create `manifest.json`, `repro.json`, `provenance.json`, and `evidence.jsonl`.
 6. Create `run-state.json` from every top-level requested capability, validate it against `schemas/run-state.schema.json`, append run-bound `work_items_initialized`, and hash the exact request bytes into `request_sha256`.
 7. Record the skill-pack commit and all reference revisions used.
+8. Before REPRODUCE or OBSERVE, run the pack's read-only capability preflight for the selected target stack:
+   ```bash
+   python3 <mew-skills-root>/scripts/check_capabilities.py \
+     --config <mew-skills-root>/capabilities.yaml \
+     --stack <target-stack> \
+     --output <run-root>/capability-report.json
+   ```
+   Validate the report against `schemas/capability-report.schema.json` and append `capability_preflight` evidence. A non-zero checker exit or report status `fail` blocks phase progression; do not install or mutate host configuration automatically. For a multi-stack run, execute once per selected stack and suffix the report filename with the stack name.
 
 ### 2. Map the target
 

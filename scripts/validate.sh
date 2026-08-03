@@ -58,9 +58,13 @@ fi
 
 echo ""
 echo "=== Capability preflight (mew#15) ==="
+cap_log=$(mktemp) || { echo "  FAIL: cannot create temp log"; FAIL=1; }
+cap_report=$(mktemp) || { echo "  FAIL: cannot create temp report"; FAIL=1; }
+cleanup() {
+  rm -f "$cap_log" "$cap_report"
+}
+trap cleanup EXIT
 if [ -f capabilities.yaml ]; then
-  cap_log=$(mktemp) || { echo "  FAIL: cannot create temp log"; FAIL=1; }
-  cap_report=$(mktemp) || { echo "  FAIL: cannot create temp report"; FAIL=1; }
   if python3 scripts/check_capabilities.py --config capabilities.yaml --output "$cap_report" >"$cap_log" 2>&1; then
     echo "  PASS: capability preflight (universal)"
     tail -2 "$cap_log" | sed 's/^/    /'
@@ -69,21 +73,19 @@ if [ -f capabilities.yaml ]; then
     tail -6 "$cap_log" | sed 's/^/    /'
     FAIL=1
   fi
-  rm -f "$cap_log"
 else
   echo "  SKIP: capabilities.yaml not present"
 fi
 
 echo ""
 echo "=== Capability report schema (if present) ==="
-if [ -n "${cap_report:-}" ] && [ -f "$cap_report" ] && command -v jsonschema >/dev/null 2>&1; then
+if [ -f "$cap_report" ] && command -v jsonschema >/dev/null 2>&1; then
   if jsonschema -i "$cap_report" schemas/capability-report.schema.json >/dev/null 2>&1; then
     echo "  PASS: capability report matches capability-report schema"
   else
     echo "  FAIL: capability report does not match schema"
     FAIL=1
   fi
-  rm -f "$cap_report"
 else
   echo "  SKIP: no report produced or jsonschema not in PATH"
 fi

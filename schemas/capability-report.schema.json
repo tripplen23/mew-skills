@@ -11,28 +11,76 @@
     "status": { "type": "string", "enum": ["pass", "fail"] },
     "checks": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["id", "purpose", "status"],
+        "required": [
+          "id", "purpose", "status", "command", "args", "resolved_path",
+          "version_output", "required", "stack", "min_version", "detected_version"
+        ],
         "properties": {
-          "id": { "type": "string" },
-          "purpose": { "type": "string" },
+          "id": { "type": "string", "minLength": 1 },
+          "purpose": { "type": "string", "minLength": 1 },
           "status": {
             "type": "string",
             "enum": ["available", "missing", "incompatible", "not_applicable"]
           },
-          "command": { "type": "string" },
+          "command": { "type": "string", "minLength": 1 },
           "args": { "type": "array", "items": { "type": "string" } },
           "resolved_path": { "type": ["string", "null"] },
           "version_output": { "type": ["string", "null"] },
           "required": { "type": "boolean" },
           "stack": { "type": ["string", "null"] },
-          "min_version": { "type": ["string", "null"] },
-          "detected_version": { "type": ["string", "null"] }
+          "min_version": {
+            "type": ["string", "null"],
+            "pattern": "^\\d+(?:\\.\\d+)*$"
+          },
+          "detected_version": {
+            "type": ["string", "null"],
+            "pattern": "^\\d+(?:\\.\\d+)*$"
+          }
         },
         "additionalProperties": false
       }
     }
   },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "pass" } } },
+      "then": {
+        "properties": {
+          "checks": {
+            "not": {
+              "contains": {
+                "type": "object",
+                "required": ["required", "status"],
+                "properties": {
+                  "required": { "const": true },
+                  "status": { "enum": ["missing", "incompatible"] }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "fail" } } },
+      "then": {
+        "properties": {
+          "checks": {
+            "contains": {
+              "type": "object",
+              "required": ["required", "status"],
+              "properties": {
+                "required": { "const": true },
+                "status": { "enum": ["missing", "incompatible"] }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "additionalProperties": false
 }
