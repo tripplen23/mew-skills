@@ -1,0 +1,57 @@
+# Universal capability requirements for Mew skill runs.
+#
+# check_capabilities.py evaluates these against the host BEFORE a run enters
+# REPRODUCE/OBSERVE. Read-only: nothing is installed or modified. A missing or
+# incompatible REQUIRED capability is an honest blocker recorded in the run
+# evidence; an optional one is reported but never blocks.
+#
+# Fields:
+#   id        stable identifier
+#   purpose   why the run needs it
+#   command   executable to resolve on PATH
+#   args      optional version-probe arguments (default: --version)
+#   required  true -> missing/incompatible blocks the run
+#   stacks    optional list of stacks this applies to (omitted = universal)
+#   min_version optional minimum dotted version (fail-closed when unprovable)
+version: 1
+checks:
+  - id: git
+    purpose: repository lock, worktree, and diff operations
+    command: git
+    required: true
+  - id: python3
+    purpose: pack validation, run tooling, evidence processing
+    command: python3
+    required: true
+  - id: jsonschema-python
+    purpose: schema-validate run artifacts (validate.sh, validate_run.py)
+    command: python3
+    args: [-c, "import jsonschema; print(jsonschema.__version__)"]
+    required: true
+  - id: pyyaml
+    purpose: parse YAML manifests (repo-inventory, behavioral-contract, plan)
+    command: python3
+    args: [-c, "import yaml; print(yaml.__version__)"]
+    required: true
+  - id: toolchain-cargo
+    purpose: Rust target build, fmt, clippy, and test gates
+    command: cargo
+    stacks: [rust]
+    required: true
+  - id: toolchain-node
+    purpose: Node target test-suite execution
+    command: node
+    stacks: [node]
+    required: true
+  - id: toolchain-go
+    purpose: Go target build and test gates
+    command: go
+    args: [version]
+    stacks: [go]
+    required: true
+  - id: toolchain-uvicorn
+    purpose: Python HTTP service reproduction (people-api class targets)
+    command: python3
+    args: [-c, "import uvicorn; print(uvicorn.__version__)"]
+    stacks: [python]
+    required: false

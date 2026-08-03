@@ -1,0 +1,7 @@
+version: 1
+checks:
+  - id: failed-probe
+    purpose: non-zero probe must never be available
+    command: python3
+    args: [-c, "import definitely_not_installed_mew_test_module"]
+    required: true

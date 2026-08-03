@@ -57,6 +57,52 @@ else
 fi
 
 echo ""
+echo "=== Capability preflight ==="
+cap_log=$(mktemp) || { echo "  FAIL: cannot create temp log"; FAIL=1; }
+cap_report=$(mktemp) || { echo "  FAIL: cannot create temp report"; FAIL=1; }
+cleanup() {
+  rm -f "$cap_log" "$cap_report"
+}
+trap cleanup EXIT
+if [ -f capabilities.yaml ]; then
+  if python3 scripts/check_capabilities.py --config capabilities.yaml --output "$cap_report" >"$cap_log" 2>&1; then
+    echo "  PASS: capability preflight (universal)"
+    tail -2 "$cap_log" | sed 's/^/    /'
+  else
+    echo "  FAIL: capability preflight"
+    tail -6 "$cap_log" | sed 's/^/    /'
+    FAIL=1
+  fi
+else
+  echo "  SKIP: capabilities.yaml not present"
+fi
+
+echo ""
+echo "=== Capability report schema (if present) ==="
+if [ -f "$cap_report" ] && command -v jsonschema >/dev/null 2>&1; then
+  if jsonschema -i "$cap_report" schemas/capability-report.schema.json >/dev/null 2>&1; then
+    echo "  PASS: capability report matches capability-report schema"
+  else
+    echo "  FAIL: capability report does not match schema"
+    FAIL=1
+  fi
+else
+  echo "  SKIP: no report produced or jsonschema not in PATH"
+fi
+
+echo ""
+echo "=== Capability preflight tests ==="
+cap_test_log=$(mktemp) || { echo "  FAIL: cannot create temp log"; FAIL=1; }
+if [ -d tests ] && python3 -m unittest tests.test_capability_preflight >"$cap_test_log" 2>&1; then
+  echo "  PASS: tests/test_capability_preflight.py"
+else
+  echo "  FAIL: capability preflight tests"
+  tail -6 "$cap_test_log" | sed 's/^/    /'
+  FAIL=1
+fi
+rm -f "$cap_test_log"
+
+echo ""
 echo "=== Regression fixtures (mew#106) ==="
 fixture_log=$(mktemp) || { echo "  FAIL: cannot create temp log"; FAIL=1; }
 if bash scripts/run_fixtures.sh >"$fixture_log" 2>&1; then

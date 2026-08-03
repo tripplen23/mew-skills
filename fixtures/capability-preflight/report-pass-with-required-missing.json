@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "timestamp": "2026-08-03T00:00:00Z",
+  "status": "pass",
+  "checks": [
+    {
+      "id": "missing-required",
+      "purpose": "semantic contradiction",
+      "status": "missing",
+      "command": "missing",
+      "args": ["--version"],
+      "resolved_path": null,
+      "version_output": null,
+      "required": true,
+      "stack": null,
+      "min_version": null,
+      "detected_version": null
+    }
+  ]
+}

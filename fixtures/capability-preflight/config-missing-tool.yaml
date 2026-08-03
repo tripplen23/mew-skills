@@ -1,0 +1,10 @@
+version: 1
+checks:
+  - id: git
+    purpose: repository lock
+    command: git
+    required: true
+  - id: def-not-a-real-tool-xyz
+    purpose: must be reported missing
+    command: def-not-a-real-tool-xyz
+    required: true
