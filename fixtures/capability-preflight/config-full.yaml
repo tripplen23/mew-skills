@@ -1,0 +1,36 @@
+version: 1
+checks:
+  - id: git
+    purpose: repository lock and worktree management
+    command: git
+    required: true
+  - id: python3
+    purpose: pack validation and run tooling
+    command: python3
+    required: true
+  - id: jsonschema-python
+    purpose: schema-validate run artifacts (validate.sh)
+    command: python3
+    args: [-c, "import jsonschema; print(jsonschema.__version__)"]
+    required: true
+  - id: toolchain-cargo
+    purpose: Rust stack builds
+    command: cargo
+    stacks: [rust]
+    required: true
+  - id: toolchain-node
+    purpose: Node stack test-suite execution
+    command: node
+    stacks: [node]
+    required: true
+  - id: toolchain-go
+    purpose: Go stack builds and tests
+    command: go
+    stacks: [go]
+    required: true
+  - id: toolchain-uvicorn
+    purpose: Python HTTP service reproduction
+    command: python3
+    args: [-c, "import uvicorn; print(uvicorn.__version__)"]
+    stacks: [python]
+    required: false

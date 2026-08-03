@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tripplen23/mew-skills/schemas/capability-report.schema.json",
+  "title": "Capability Preflight Report",
+  "description": "Read-only host capability report produced by check_capabilities.py (mew#15)",
+  "type": "object",
+  "required": ["schema_version", "timestamp", "status", "checks"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "purpose", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "purpose": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["available", "missing", "incompatible", "not_applicable"]
+          },
+          "command": { "type": "string" },
+          "args": { "type": "array", "items": { "type": "string" } },
+          "resolved_path": { "type": ["string", "null"] },
+          "version_output": { "type": ["string", "null"] },
+          "required": { "type": "boolean" },
+          "stack": { "type": ["string", "null"] },
+          "min_version": { "type": ["string", "null"] },
+          "detected_version": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

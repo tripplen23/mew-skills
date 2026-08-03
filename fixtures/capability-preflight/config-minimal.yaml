@@ -1,0 +1,13 @@
+# Universal requirements — every Mew skill run needs these.
+# Learned from real runs: git and python3 are checked by install.sh;
+# jsonschema+pyyaml failures used to surface mid-run (mew#15).
+version: 1
+checks:
+  - id: git
+    purpose: repository lock and worktree management
+    command: git
+    required: true
+  - id: python3
+    purpose: pack validation and run tooling
+    command: python3
+    required: true

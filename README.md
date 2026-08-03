@@ -69,7 +69,7 @@ bash scripts/validate.sh
 
 Checks: `agentskills validate` on every skill, JSON Schema syntax, frontmatter security (no `< >`), `name` == directory name.
 
-Validation also enforces a 500-line cap per `SKILL.md` and validates the pinned holdout manifest.
+Validation also enforces a 500-line cap per `SKILL.md`, validates the pinned holdout manifest, runs the regression fixtures, and runs the capability preflight (`mew#15`).
 
 `validate.sh` checks the pack itself. To gate a **run's** artifacts against the
 schemas (the enforcement the skills instruct), point the run gate at a run dir:

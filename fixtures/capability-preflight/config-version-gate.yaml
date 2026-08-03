@@ -1,0 +1,12 @@
+version: 1
+checks:
+  - id: git
+    purpose: repository lock
+    command: git
+    required: true
+  - id: toolchain-python
+    purpose: version gate demonstration
+    command: python3
+    min_version: "99.0.0"
+    stacks: [python]
+    required: true
