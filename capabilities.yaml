@@ -1,4 +1,4 @@
-# Universal capability requirements for Mew skill runs (mew#15).
+# Universal capability requirements for Mew skill runs.
 #
 # check_capabilities.py evaluates these against the host BEFORE a run enters
 # REPRODUCE/OBSERVE. Read-only: nothing is installed or modified. A missing or

@@ -57,7 +57,7 @@ else
 fi
 
 echo ""
-echo "=== Capability preflight (mew#15) ==="
+echo "=== Capability preflight ==="
 cap_log=$(mktemp) || { echo "  FAIL: cannot create temp log"; FAIL=1; }
 cap_report=$(mktemp) || { echo "  FAIL: cannot create temp report"; FAIL=1; }
 cleanup() {
@@ -91,7 +91,7 @@ else
 fi
 
 echo ""
-echo "=== Capability preflight tests (mew#15) ==="
+echo "=== Capability preflight tests ==="
 cap_test_log=$(mktemp) || { echo "  FAIL: cannot create temp log"; FAIL=1; }
 if [ -d tests ] && python3 -m unittest tests.test_capability_preflight >"$cap_test_log" 2>&1; then
   echo "  PASS: tests/test_capability_preflight.py"

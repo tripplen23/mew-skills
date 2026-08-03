@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only capability preflight for Mew skill runs (mew#15).
+"""Read-only capability preflight for Mew skill runs.
 
 Checks declared requirements against the current host without installing,
 modifying, or writing anything outside the requested output file. Modeled

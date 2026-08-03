@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for the capability preflight checker (mew#15).
+"""Tests for the capability preflight checker.
 
 Fixtures live in fixtures/capability-preflight/:
   - config-minimal.yaml   : universal requirements only

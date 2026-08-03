@@ -1,6 +1,6 @@
 # Universal requirements — every Mew skill run needs these.
 # Learned from real runs: git and python3 are checked by install.sh;
-# jsonschema+pyyaml failures used to surface mid-run (mew#15).
+# jsonschema+pyyaml failures used to surface mid-run.
 version: 1
 checks:
   - id: git

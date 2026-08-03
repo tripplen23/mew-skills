@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/tripplen23/mew-skills/schemas/capability-report.schema.json",
   "title": "Capability Preflight Report",
-  "description": "Read-only host capability report produced by check_capabilities.py (mew#15)",
+  "description": "Read-only host capability report produced by check_capabilities.py",
   "type": "object",
   "required": ["schema_version", "timestamp", "status", "checks"],
   "properties": {
