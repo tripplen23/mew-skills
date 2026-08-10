@@ -1,0 +1,6 @@
+{
+  "run_id": "20260801-181337-217cab5",
+  "target_repo": "https://github.com/automationhacks/people-api",
+  "desired_evolution": "Migrate the people CRUD API from Flask+Connexion (Python) to Rust (axum + rusqlite), preserving the public HTTP contract defined by swagger.yml and the observed baseline behavior exactly.",
+  "mode": "language_port"
+}

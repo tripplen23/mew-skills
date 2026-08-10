@@ -1,0 +1,45 @@
+{
+  "run_id": "20260801-181337-217cab5",
+  "artifacts": [
+    {
+      "path": "behavioral-contract.yaml",
+      "sha256": "8c85e12e2c3c5c96b5cb445cbf2a47c2bb7ba65daf233fd46822ada6dcecdb90"
+    },
+    {
+      "path": "migration-plan.yaml",
+      "sha256": "d73c0e4cf36ece6aac13909135feaaa0eb28c1e116f70775d78909903fedc2be"
+    },
+    {
+      "path": "repo-inventory.yaml",
+      "sha256": "da47b202cfb8239a80cdd9346be8c3f44b3e18534f400e4a106f953d3f19a263"
+    },
+    {
+      "path": "migration-request.json",
+      "sha256": "21ed2d4fa5e78fedaa86df3dc46aecf32a713e7fceef70e2b6351d78f13b6766"
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "72f9a0e45daead6a8b2a958f1fcec63b794cf6cf26fe15a16586fbf487c26e3d"
+    },
+    {
+      "path": "run-state.json",
+      "sha256": "09b31719b0c09ca41bd9f55641b7da1c38ce94f701f292d63bf04bf11034d41c"
+    },
+    {
+      "path": "repro.json",
+      "sha256": "cb8a88af72801ef70b4c03b05d1480649762783c416a184ec426e009b8921070"
+    },
+    {
+      "path": "provenance.json",
+      "sha256": "a6706c497052266f49281a01f927fe7632ff6adee10cf514963770a71112b7c8"
+    },
+    {
+      "path": "parity-report.json",
+      "sha256": "35ee2e1ee5732516dfca6deb5d403f7d00ba6810f820b17bd26a9306014516c7"
+    },
+    {
+      "path": "evidence.jsonl",
+      "sha256": "f44b8a39050a3dbde580607df6330c71e2b837cc3657d2fdf58d3ee5733c086d"
+    }
+  ]
+}

@@ -778,6 +778,70 @@ def _child_graph_problems(root_run_id: str, related: dict[str, dict]) -> list[st
     return problems
 
 
+def _derivations_problems(run_dir: Path) -> list[str]:
+    """Verify derivations.jsonl: schema-valid, hashes match on-disk bytes.
+
+    Each record must link a derived artifact (and optionally inputs) that
+    exists inside the run directory; content hashes are recomputed from the
+    files, never trusted from the record. A record whose hash does not match
+    breaks the reviewer's ability to reconstruct intent from artifacts.
+    """
+    derivations = run_dir / "derivations.jsonl"
+    if not derivations.exists():
+        return []  # absent is fine: derivations are additive, not mandatory
+    problems: list[str] = []
+    schema_path = PACK / "schemas" / "derivations.schema.json"
+    try:
+        with open(schema_path) as fh:
+            schema = json.load(fh)
+        validator = Draft202012Validator(schema)
+    except (OSError, ValueError) as exc:
+        return [f"derivations: cannot load schema ({exc})"]
+    for lineno, raw in enumerate(derivations.read_text().splitlines(), 1):
+        if not raw.strip():
+            continue
+        try:
+            record = json.loads(raw)
+        except ValueError as exc:
+            problems.append(f"derivations.jsonl:{lineno}: invalid JSON ({exc})")
+            continue
+        for error in validator.iter_errors(record):
+            problems.append(f"derivations.jsonl:{lineno}: schema: {error.message}")
+        derived = record.get("derived") or {}
+        artifact = derived.get("artifact")
+        if artifact:
+            problem = _verify_artifact_hash(run_dir, artifact, derived.get("sha256"), f"derivations.jsonl:{lineno}")
+            if problem:
+                problems.append(problem)
+        for input_ref in record.get("inputs") or []:
+            name = input_ref.get("artifact")
+            if name:
+                problem = _verify_artifact_hash(run_dir, name, input_ref.get("sha256"), f"derivations.jsonl:{lineno}")
+                if problem:
+                    problems.append(problem)
+    return problems
+
+
+def _verify_artifact_hash(run_dir: Path, name: str, declared_hash: str | None, where: str) -> str | None:
+    """Recompute an artifact's SHA-256 and compare with the declared hash."""
+    if Path(name).name != name:
+        return f"{where}: artifact name is not a plain filename: {name!r}"
+    path = run_dir / name
+    if not path.exists() or not path.is_file():
+        return f"{where}: artifact missing: {name}"
+    if path.is_symlink():
+        return f"{where}: artifact must not be a symlink: {name}"
+    try:
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError as exc:
+        return f"{where}: cannot hash {name} ({exc})"
+    if declared_hash is None:
+        return f"{where}: {name} has no declared sha256"
+    if digest != declared_hash:
+        return f"{where}: {name} sha256 mismatch (declared {declared_hash[:12]}..., disk {digest[:12]}...)"
+    return None
+
+
 def analyze_run(run_dir: Path, *, final: bool = False) -> int:
     if not run_dir.is_dir():
         print(f"not a directory: {run_dir}")
@@ -867,6 +931,7 @@ def analyze_run(run_dir: Path, *, final: bool = False) -> int:
         final=final,
     )
     problems.extend(_child_graph_problems(current_run_id, related))
+    problems.extend(_derivations_problems(run_dir))
     if problems:
         for p in problems:
             print(f"  FAIL: {p}")

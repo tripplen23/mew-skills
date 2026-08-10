@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tripplen23/mew-skills/schemas/derivations.schema.json",
+  "title": "Run-Artifact Derivation Record",
+  "description": "Single line in derivations.jsonl — links a produced artifact to its input artifacts with content hashes",
+  "type": "object",
+  "required": [
+    "schema_version", "run_id", "derived", "inputs", "phase", "action", "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "run_id": { "type": "string", "pattern": "^\\d{8}-\\d{6}-[a-z0-9]{7}$" },
+    "derived": { "$ref": "#/$defs/artifact_ref" },
+    "inputs": {
+      "type": "array",
+      "minItems": 0,
+      "items": { "$ref": "#/$defs/artifact_ref" }
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "ingest", "reproduce", "observe", "grill", "contract", "plan",
+        "implement", "verify", "handoff"
+      ]
+    },
+    "action": { "type": "string", "minLength": 1 },
+    "details": {
+      "type": "object",
+      "description": "Free-form structured detail (property_id, kind, oracle, ...)",
+      "additionalProperties": true
+    },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "artifact_ref": {
+      "type": "object",
+      "required": ["artifact", "sha256"],
+      "properties": {
+        "artifact": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

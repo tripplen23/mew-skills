@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "source": {
+    "license_spdx": "Apache-2.0",
+    "license_verified_by": "LICENSE file present in repo",
+    "repo_url": "https://github.com/automationhacks/people-api",
+    "sbom_format": "none"
+  },
+  "target": {
+    "incompatible_licenses_found": false,
+    "rust_crates": [
+      "axum",
+      "rusqlite",
+      "serde",
+      "serde_json",
+      "chrono"
+    ]
+  },
+  "build_provenance": {
+    "slsa_level": "none"
+  }
+}

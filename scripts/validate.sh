@@ -103,6 +103,18 @@ fi
 rm -f "$cap_test_log"
 
 echo ""
+echo "=== Derivation record tests ==="
+deriv_test_log=$(mktemp) || { echo "  FAIL: cannot create temp log"; FAIL=1; }
+if [ -d tests ] && python3 -m unittest tests.test_derivations >"$deriv_test_log" 2>&1; then
+  echo "  PASS: tests/test_derivations.py"
+else
+  echo "  FAIL: derivation record tests"
+  tail -6 "$deriv_test_log" | sed 's/^/    /'
+  FAIL=1
+fi
+rm -f "$deriv_test_log"
+
+echo ""
 echo "=== Regression fixtures (mew#106) ==="
 fixture_log=$(mktemp) || { echo "  FAIL: cannot create temp log"; FAIL=1; }
 if bash scripts/run_fixtures.sh >"$fixture_log" 2>&1; then
